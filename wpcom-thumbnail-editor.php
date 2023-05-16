@@ -136,7 +136,7 @@ class WPcom_Thumbnail_Editor {
 	 */
 	public function enqueue_admin_scriptreset( $hook ) {
 		$build_info = $this->load_asset();
-		wp_enqueue_style( 'thumbnail-style', plugin_dir_url( __FILE__ ) . 'build/index.css', $build_info['dependencies'], $build_info['version'] );
+		wp_enqueue_style( 'thumbnail-style', plugin_dir_url( __FILE__ ) . 'build/index.css', array( 'wp-components' ), $build_info['version'] );
 		wp_enqueue_script( 'thumbnail-script', plugin_dir_url( __FILE__ ) . 'build/index.js', $build_info['dependencies'], $build_info['version'], true );
 	}
 
