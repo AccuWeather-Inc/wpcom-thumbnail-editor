@@ -1,0 +1,27 @@
+{
+  "name": "wpcom-thumbnail-editor",
+  "version": "1.0.0",
+  "description": "Since thumbnails are generated on-demand on WordPress.com, thumbnail cropping location must be set via the URL.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "wp-scripts build",
+    "start": "wp-scripts start"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@wordpress/dependency-extraction-webpack-plugin": "^4.16.0",
+    "@wordpress/scripts": "^26.2.0"
+  },
+  "dependencies": {
+    "@wordpress/components": "^23.8.0",
+    "@wordpress/element": "^5.8.0",
+    "@wordpress/i18n": "^4.31.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}

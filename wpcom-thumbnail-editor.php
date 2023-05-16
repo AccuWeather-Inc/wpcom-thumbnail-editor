@@ -62,7 +62,7 @@ class WPcom_Thumbnail_Editor {
 			add_filter( 'image_downsize', array( &$this, 'get_thumbnail_url' ), 15, 3 );
 
 			// Run late to avoid overwriting modifications made at default priority.
-			add_filter( 'wp_calculate_image_srcset', [ $this, 'maintain_thumbnail_crop_in_srcset' ], 20, 3 );
+			add_filter( 'wp_calculate_image_srcset', array( $this, 'maintain_thumbnail_crop_in_srcset' ), 20, 3 );
 		}
 
 		// Admin-only hooks.
@@ -83,6 +83,9 @@ class WPcom_Thumbnail_Editor {
 			}
 
 			add_action( 'admin_notices', array( &$this, 'jetpack_photon_url_message' ) );
+
+			add_action( 'admin_enqueue_scripts', array( &$this, 'enqueue_admin_scriptreset' ) );
+
 		}
 
 		// using a global for now, maybe these values could be set in constructor in future?
@@ -108,6 +111,33 @@ class WPcom_Thumbnail_Editor {
 			}
 			$this->image_ratio_map = $ratio_map;
 		}
+	}
+
+	private function load_asset() {
+		static $asset;
+
+		if ( empty( $asset ) ) {
+			$asset_file = __DIR__ . '/build/index.asset.php';
+
+			if ( file_exists( $asset_file ) && 0 === validate_file( $asset_file ) ) {
+				// phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
+				$asset = require $asset_file;
+			} else {
+				$asset = null;
+			}
+		}
+		return $asset;
+	}
+
+	/**
+	 * @param $hook
+	 *
+	 * @return void
+	 */
+	public function enqueue_admin_scriptreset( $hook ) {
+		$build_info = $this->load_asset();
+		wp_enqueue_style( 'thumbnail-style', plugin_dir_url( __FILE__ ) . 'build/index.css', $build_info['dependencies'], $build_info['version'] );
+		wp_enqueue_script( 'thumbnail-script', plugin_dir_url( __FILE__ ) . 'build/index.js', $build_info['dependencies'], $build_info['version'], true );
 	}
 
 	/**
@@ -194,6 +224,15 @@ class WPcom_Thumbnail_Editor {
 
 			$html .= '<div>';
 
+		$html .= $this->generate_thumbnails_preview( $sizes, $attachment );
+
+		$html .= '<div id="thumbnail">Loading...</div>';
+
+		return $html;
+	}
+
+	public function generate_thumbnails_preview( $sizes, $attachment ) {
+		$html = '';
 		// key wont really matter if its not using a dimension map.
 		foreach ( $sizes as $key => $size ) {
 			$image_name = $this->use_ratio_map ? $key : $size;
@@ -219,8 +258,8 @@ class WPcom_Thumbnail_Editor {
 				$thumbnail_url = $thumbnail[0];
 			}
 
-			$html     .= '<div style="float:left;margin:0 20px 20px 0;min-width:250px;">';
-				$html .= '<a href="' . esc_url( $edit_url ) . '"';
+			$html .= '<div style="float:left;margin:0 20px 20px 0;min-width:250px;">';
+			$html .= '<a href="' . esc_url( $edit_url ) . '"';
 
 
 			if ( 'media.php' != basename( filter_input( INPUT_SERVER, 'PHP_SELF', FILTER_SANITIZE_STRING ) ) ) {
@@ -234,8 +273,8 @@ class WPcom_Thumbnail_Editor {
 			$html         .= '</div>';
 		}
 
-			$html .= '</div>';
-		$html     .= '</div>';
+		$html .= '</div>';
+		$html .= '</div>';
 
 		return $html;
 	}
@@ -874,7 +913,7 @@ class WPcom_Thumbnail_Editor {
 			return $sources;
 		}
 
-		$full_size_params = [];
+		$full_size_params = array();
 		wp_parse_str( $full_size_params_string, $full_size_params );
 		unset( $full_size_params_string );
 
@@ -903,7 +942,7 @@ class WPcom_Thumbnail_Editor {
 				$source_params_string = '';
 			}
 
-			$source_params = [];
+			$source_params = array();
 			wp_parse_str( $source_params_string, $source_params );
 			unset( $source_params_string );
 

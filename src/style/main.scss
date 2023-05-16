@@ -1,0 +1,69 @@
+// Import Gutenberg variables
+@import "node_modules/@wordpress/base-styles/breakpoints";
+
+// Add other breakpoints or adjustments we want below
+
+// Import Gutenberg variables
+@import "node_modules/@wordpress/base-styles/colors";
+
+// Add other colors or adjustments we want below
+
+// Import Gutenberg variables
+@import "node_modules/@wordpress/base-styles/mixins";
+
+// Add other mixins or adjustments we want below
+
+// Import Gutenberg variables
+@import "node_modules/@wordpress/base-styles/variables";
+
+// Gutenberg Missing Styles
+// $gray-500 is not declared in Gutenberg.
+$gray-500: #bbb;
+
+// Add other variables or adjustments we want below
+
+// Default Styles Here
+@import "node_modules/@wordpress/base-styles/z-index";
+@import "node_modules/@wordpress/base-styles/default-custom-properties";
+
+// Hack to fix the Tooltip position of the top-right side close button in a Modal component.
+.wpcom-thumbnail-editor {
+
+	&__screen-overlay {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+	}
+
+	&__frame {
+		@include break-small {
+			transform: initial;
+			position: relative;
+			top: 0;
+			bottom: 0;
+			left: 0;
+			right: 0;
+		}
+	}
+}
+
+.components-modal__screen-overlay {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+// .wpcom-thumbnail-editor__overlay {
+// 	// z-index: 160001;
+// 	position: fixed;
+// 	top: 30px;
+// 	left: 30px;
+// 	right: 30px;
+// 	bottom: 30px;
+
+// 	.components-modal__frame {
+// 		min-height: unset;
+// 		width: unset;
+// 		max-height: unset;
+// 	}
+// }
