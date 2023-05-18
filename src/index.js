@@ -1,6 +1,7 @@
-import { createRoot, render, createElement } from '@wordpress/element';
-import App from './App';
-import './style/main.scss';
+import ThumbnailEditorModal from './modal';
+import './main.scss';
+
+const { createRoot, render, createElement } = wp.element;
 
 function waitForElm(selector) {
 	return new Promise((resolve) => {
@@ -24,7 +25,7 @@ function waitForElm(selector) {
 
 const load = () => {
 	const domElement = document.getElementById('thumbnail');
-	const uiElement = createElement(App, { test: 'test' });
+	const uiElement = createElement(ThumbnailEditorModal, { test: 'test' });
 
 	if (createRoot) {
 		createRoot(domElement).render(uiElement);

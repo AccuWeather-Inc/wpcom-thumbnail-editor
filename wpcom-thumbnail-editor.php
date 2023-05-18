@@ -111,6 +111,8 @@ class WPcom_Thumbnail_Editor {
 			}
 			$this->image_ratio_map = $ratio_map;
 		}
+
+		add_action( 'rest_api_init', array( $this, 'register_attachment_meta' ) );
 	}
 
 	/**
@@ -1050,6 +1052,26 @@ class WPcom_Thumbnail_Editor {
 		return apply_filters(
 			'wpcom_thumbnail_editor_photon_is_available',
 			$available
+		);
+	}
+
+	/**
+	 * Add the thumbnail metadata to the media (attachment) WP REST API Response.
+	 */
+	public function register_attachment_meta() {
+		register_meta(
+			'post',
+			$this->post_meta,
+			array(
+				'object_subtype' => 'attachment',
+				'single'         => true,
+				'type'           => 'object',
+				'show_in_rest'   => array(
+					'prepare_callback' => function ( $value ) {
+						return $value;
+					},
+				),
+			)
 		);
 	}
 }
