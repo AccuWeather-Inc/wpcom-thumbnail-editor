@@ -1059,20 +1059,39 @@ class WPcom_Thumbnail_Editor {
 	 * Add the thumbnail metadata to the media (attachment) WP REST API Response.
 	 */
 	public function register_attachment_meta() {
-		register_meta(
-			'post',
+		register_rest_field(
+			'attachment',
 			$this->post_meta,
 			array(
-				'object_subtype' => 'attachment',
-				'single'         => true,
-				'type'           => 'object',
-				'show_in_rest'   => array(
-					'prepare_callback' => function ( $value ) {
-						return $value;
-					},
-				),
+				'get_callback'    => array( $this, 'get_thumbnail_meta' ),
+				'update_callback' => array( $this, 'update_thumbnail_meta' ),
+				'schema'          => null,
 			)
 		);
+	}
+
+	/**
+	 * Get the REST get for 'wpcom_thumbnail_edit' meta
+	 *
+	 * @param array $thumbnail_arr Array of thumbnail data prepared for REST.
+	 *
+	 * @return array
+	 */
+	public function get_thumbnail_meta( $thumbnail_arr ) {
+		$thumbnail_meta = \get_post_meta( $thumbnail_arr['id'], $this->post_meta, true );
+		return ! empty( $thumbnail_meta ) ? $thumbnail_meta : array();
+	}
+
+	/**
+	 * Update 'wpcom_thumbnail_edit' meta via the REST route.
+	 *
+	 * @param mixed    $value     The `wpcom_thumbnail_edit` meta.
+	 * @param \WP_Post $thumbnail The thumbnail post object.
+	 *
+	 * @return int|bool
+	 */
+	public function update_thumbnail_meta( $value, $thumbnail ) {
+		return \update_post_meta( $thumbnail->ID, $this->post_meta, $value );
 	}
 }
 
