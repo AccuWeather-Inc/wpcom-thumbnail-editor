@@ -306,7 +306,6 @@ class WPcom_Thumbnail_Editor {
 
 		$html .= '<div id="thumbnail" ';
 		$html .= 'data-id="' . $attachment->ID;
-		$html .= '" data-url="' . $attachment->guid;
 		$html .= '" data-sizes="' . htmlspecialchars( wp_json_encode( $sizes ), ENT_QUOTES, 'UTF-8' );
 		$html .= '">Loading...</div>';
 
@@ -1138,7 +1137,9 @@ class WPcom_Thumbnail_Editor {
 	 */
 	public function get_thumbnail_meta( $thumbnail_arr ) {
 		$thumbnail_meta = \get_post_meta( $thumbnail_arr['id'], $this->post_meta, true );
-		return ! empty( $thumbnail_meta ) ? $thumbnail_meta : array();
+		return ! empty( $thumbnail_meta )
+			? array_filter( $thumbnail_meta )
+			: array();
 	}
 
 	/**

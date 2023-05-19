@@ -1,5 +1,4 @@
 import ThumbnailEditorModal from './modal';
-import { store as coreStore } from '@wordpress/core-data';
 import './main.scss';
 
 const {
@@ -8,7 +7,6 @@ const {
 		createRoot,
 		createElement,
 	},
-	data: { select },
 } = wp;
 
 function waitForElm(selector) {
@@ -39,15 +37,10 @@ const load = () => {
 			: [];
 		const props = {
 			id: domElement.dataset.id,
-			url: domElement.dataset?.url,
 			ratioMap,
 		};
-		console.log({
-			data: domElement?.dataset,
-			props,
-		});
-		const uiElement = createElement(ThumbnailEditorModal, props);
 
+		const uiElement = createElement(ThumbnailEditorModal, props);
 		if (createRoot) {
 			createRoot(domElement).render(uiElement);
 		} else {

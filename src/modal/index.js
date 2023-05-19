@@ -1,28 +1,37 @@
 /* global wp, React */
 
-import { Button, Modal } from '@wordpress/components';
+import {
+	Modal,
+	Button,
+	Spinner,
+	TabPanel,
+} from '@wordpress/components';
+import { store as coreStore } from '@wordpress/core-data';
 import PropTypes from 'prop-types';
 
 const {
 	i18n: {
 		__,
 	},
-	element: {
-		useState,
+	apiFetch,
+	url: {
+		addQueryArgs,
 	},
+	data: { withSelect },
 } = wp;
 
-export default class ThumbnailEditorModal extends React.PureComponent {
+class ThumbnailEditorModal extends React.PureComponent {
 	// Define Prop for this component.
 	static defaultProps = {
-		url: '',
+		image: null,
 		ratioMap: [],
+		thumbnailEdits: [],
 	};
 
 	// Define PropTypes for this component.
 	static propTypes = {
 		id: PropTypes.number.isRequired,
-		url: PropTypes.string.isRequired,
+		image: PropTypes.string,
 		ratioMap: PropTypes.arrayOf(
 			PropTypes.objectOf(
 				PropTypes.shape({
@@ -51,16 +60,32 @@ export default class ThumbnailEditorModal extends React.PureComponent {
 	 */
 	state = {
 		open: false,
-		image: null,
+		loading: false,
 		setOpen: (isOpen) => {
 			this.setState({
 				open: isOpen,
 			});
 		},
+		tabList: null,
+		setTabList: () => {
+			const { ratioMap } = this.props;
+			let tabList = [];
+			for (const [key, val] of Object.entries(ratioMap)) {
+				tabList.push({
+					name: key,
+					title: key,
+					className: 'tab-' + key,
+				});
+			}
+			this.setState({
+				tabList,
+			});
+			return tabList;
+		},
 		thumbnail: {
 			selection: [],
 			dimensions: [],
-		}
+		},
 	};
 
 	/**
@@ -150,14 +175,224 @@ export default class ThumbnailEditorModal extends React.PureComponent {
 		});
 	}
 
+	oldRenderModal() {
+		const {
+			id,
+			image: {
+				link,
+			}
+		} = this.props;
+		const {
+			setOpen,
+		} = this.state;
+
+		console.log({
+			props: this.props,
+		});
+
+		return (
+			<Modal
+				title={__('Edit Image Crops', 'wpcom-thumbnail-editor')}
+				onRequestClose={() => setOpen(false)}
+				isFullScreen
+				shouldCloseOnClickOutside={false}
+				shouldCloseOnEsc={false}
+				overlayClassName='wpcom-thumbnail-editor__overlay'
+			>
+				<h2>
+					{__(
+						'Edit Thumbnail: 1:1',
+						'wpcom-thumbnail-editor',
+					)}
+				</h2>
+				<p>
+					{__(
+						'The original image is shown in full below, although it may have been shrunk to fit on your screen. Please select the portion that you would like to use as the thumbnail image.',
+						'wpcom-thumbnail-editor'
+					)}
+				</p>
+				<p>
+					<img
+						src={link}
+						// width='1024'
+						// height='576'
+						id="wpcom-thumbnail-edit"
+						alt=""
+					/>
+				</p>
+				<p>
+					<Button
+						variant="primary"
+						onClick={() => null}
+					>
+						{__('Reset Thumbnail', 'wpcom-thumbnail-editor')}
+					</Button>
+					<Button
+						variant="primary"
+						onClick={() => null}
+					>
+						{__('Save Changes', 'wpcom-thumbnail-editor')}
+					</Button>
+				</p>
+				<h3>
+					{__('Fullsize Thumbnail Preview', 'wpcom-thumbnail-editor')}
+				</h3>
+				<div style={{overflow:'hidden', width:'150px', height:'150px'}}>
+					<img id="wpcom-thumbnail-edit-preview" class="hidden" src={link} />
+				</div>
+
+				<input type="hidden" name="action" value="wpcom_thumbnail_edit" />
+				<input type="hidden" name="id" value={id} />
+				<input type="hidden" name="size" value="<?php echo esc_attr( $size ); ?>" />
+
+				{/*
+				* Since the fullsize image is possibly scaled down, we need to record at what size it was
+				* displayed at so the we can scale up the new selection dimensions to the fullsize image.
+				*/}
+				<input type="hidden" name="wpcom_thumbnail_edit_display_width"  value="<?php echo (int) $image[1]; ?>" />
+				<input type="hidden" name="wpcom_thumbnail_edit_display_height" value="<?php echo (int) $image[2]; ?>" />
+
+				{/* <!-- These are manipulated via Javascript to submit the selected values --> */}
+				<input type="hidden" name="wpcom_thumbnail_edit_x1" value="<?php echo (int) $initial_selection[0]; ?>" />
+				<input type="hidden" name="wpcom_thumbnail_edit_y1" value="<?php echo (int) $initial_selection[1]; ?>" />
+				<input type="hidden" name="wpcom_thumbnail_edit_x2" value="<?php echo (int) $initial_selection[2]; ?>" />
+				<input type="hidden" name="wpcom_thumbnail_edit_y2" value="<?php echo (int) $initial_selection[3]; ?>" />
+			</Modal>
+		);
+	}
+
+	renderTabView(tab) {
+		const {
+			id,
+			image: {
+				link,
+				media_details: {
+					width,
+					height,
+					sizes,
+				},
+			},
+			ratioMap,
+			thumbnailEdits,
+		} = this.props;
+
+		const cropSizeName = ratioMap[ tab.name ];
+		const full = {
+			width: sizes['full'].width,
+			height: sizes['full'].height,
+		};
+		const thumbnail = {
+			width: sizes[ cropSizeName ].width,
+			height: sizes[ cropSizeName ].height,
+			url: sizes[ cropSizeName ].source_url,
+			selection: {
+				x1: thumbnailEdits?.[ cropSizeName ]?.[0],
+				y1: thumbnailEdits?.[ cropSizeName ]?.[1],
+				x2: thumbnailEdits?.[ cropSizeName ]?.[2],
+				y2: thumbnailEdits?.[ cropSizeName ]?.[3],
+			},
+		};
+
+		return (
+			<div className={tab.className}>
+				<h2>
+					{__( 'Edit Thumbnail: ', 'wpcom-thumbnail-editor') + tab.title }
+				</h2>
+				<p>
+					{__(
+						'The original image is shown in full below, although it may have been shrunk to fit on your screen. Please select the portion that you would like to use as the thumbnail image.',
+						'wpcom-thumbnail-editor'
+					)}
+				</p>
+				<p>
+					<img
+						src={link}
+						width={full.width}
+						height={full.height}
+						id="wpcom-thumbnail-edit"
+						alt=""
+					/>
+				</p>
+				<p>
+					<Button
+						variant="primary"
+						onClick={() => null}
+					>
+						{__('Reset Thumbnail', 'wpcom-thumbnail-editor')}
+					</Button>
+					<Button
+						variant="primary"
+						onClick={() => null}
+					>
+						{__('Save Changes', 'wpcom-thumbnail-editor')}
+					</Button>
+				</p>
+				<h3>
+					{__('Fullsize Thumbnail Preview', 'wpcom-thumbnail-editor')}
+				</h3>
+				<div style={{overflow:'hidden', width: thumbnail.width + 'px', height: thumbnail.height + 'px'}}>
+					<img id="wpcom-thumbnail-edit-preview" class="hidden" src={link} />
+				</div>
+
+				<input type="hidden" name="action" value="wpcom_thumbnail_edit" />
+				<input type="hidden" name="id" value={id} />
+				<input type="hidden" name="size" value={cropSizeName} />
+
+				{/*
+				* Since the fullsize image is possibly scaled down, we need to record at what size it was
+				* displayed at so the we can scale up the new selection dimensions to the fullsize image.
+				*/}
+				<input type="hidden" name="wpcom_thumbnail_edit_display_width"  value={thumbnail.width} />
+				<input type="hidden" name="wpcom_thumbnail_edit_display_height" value={thumbnail.height} />
+
+				{/* <!-- These are manipulated via Javascript to submit the selected values --> */}
+				<input type="hidden" name="wpcom_thumbnail_edit_x1" value={thumbnail.selection.x1} />
+				<input type="hidden" name="wpcom_thumbnail_edit_y1" value={thumbnail.selection.y1} />
+				<input type="hidden" name="wpcom_thumbnail_edit_x2" value={thumbnail.selection.x2} />
+				<input type="hidden" name="wpcom_thumbnail_edit_y2" value={thumbnail.selection.y2} />
+			</div>
+		)
+	}
+
+	renderModal() {
+		const {
+			setOpen,
+			tabList,
+			setTabList
+		} = this.state;
+
+		console.log({
+			props: this.props,
+		});
+
+		return (
+			<Modal
+				title={__('Edit Image Crops', 'wpcom-thumbnail-editor')}
+				onRequestClose={() => setOpen(false)}
+				isFullScreen
+				shouldCloseOnClickOutside={false}
+				shouldCloseOnEsc={false}
+				overlayClassName='wpcom-thumbnail-editor__overlay'
+			>
+				<TabPanel
+					className="my-tab-panel"
+					tabs={ tabList ?? setTabList() }
+				>
+					{ ( tab ) => this.renderTabView( tab ) }
+				</TabPanel>
+			</Modal>
+		);
+	}
+
 	/**
 	 * Renders component markup.
 	 * @returns {object} - JSX for this component.
 	 */
 	render() {
 		const {
-			url
+			image,
 		} = this.props;
+
 		const {
 			open,
 			setOpen,
@@ -170,75 +405,28 @@ export default class ThumbnailEditorModal extends React.PureComponent {
 						{__('Edit image cropping', 'wpcom-thumbnail-editor')}
 					</Button>
 				) : (
-					<Modal
-						title={__('Edit Image Crops', 'wpcom-thumbnail-editor')}
-						onRequestClose={() => setOpen(false)}
-						isFullScreen
-						shouldCloseOnClickOutside={false}
-						shouldCloseOnEsc={false}
-						overlayClassName='wpcom-thumbnail-editor__overlay'
-					>
-						<h2>
-							{__(
-								'Edit Thumbnail: 1:1',
-								'wpcom-thumbnail-editor',
-							)}
-						</h2>
-						<p>
-							{__(
-								'The original image is shown in full below, although it may have been shrunk to fit on your screen. Please select the portion that you would like to use as the thumbnail image.',
-								'wpcom-thumbnail-editor'
-							)}
-						</p>
-						<p>
-							<img
-								src={url}
-								// width='1024'
-								// height='576'
-								id="wpcom-thumbnail-edit"
-								alt=""
-							/>
-						</p>
-						<p>
-							<Button
-								variant="primary"
-								onClick={() => null}
-							>
-								{__('Reset Thumbnail', 'wpcom-thumbnail-editor')}
-							</Button>
-							<Button
-								variant="primary"
-								onClick={() => null}
-							>
-								{__('Save Changes', 'wpcom-thumbnail-editor')}
-							</Button>
-						</p>
-						<h3>
-							{__('Fullsize Thumbnail Preview', 'wpcom-thumbnail-editor')}
-						</h3>
-						<div style={{overflow:'hidden', width:'150px', height:'150px'}}>
-							<img id="wpcom-thumbnail-edit-preview" class="hidden" src={url} />
-						</div>
-
-						<input type="hidden" name="action" value="wpcom_thumbnail_edit" />
-						<input type="hidden" name="id" value="<?php echo (int) $attachment->ID; ?>" />
-						<input type="hidden" name="size" value="<?php echo esc_attr( $size ); ?>" />
-
-						{/*
-						  * Since the fullsize image is possibly scaled down, we need to record at what size it was
-						  * displayed at so the we can scale up the new selection dimensions to the fullsize image.
-						*/}
-						<input type="hidden" name="wpcom_thumbnail_edit_display_width"  value="<?php echo (int) $image[1]; ?>" />
-						<input type="hidden" name="wpcom_thumbnail_edit_display_height" value="<?php echo (int) $image[2]; ?>" />
-
-						{/* <!-- These are manipulated via Javascript to submit the selected values --> */}
-						<input type="hidden" name="wpcom_thumbnail_edit_x1" value="<?php echo (int) $initial_selection[0]; ?>" />
-						<input type="hidden" name="wpcom_thumbnail_edit_y1" value="<?php echo (int) $initial_selection[1]; ?>" />
-						<input type="hidden" name="wpcom_thumbnail_edit_x2" value="<?php echo (int) $initial_selection[2]; ?>" />
-						<input type="hidden" name="wpcom_thumbnail_edit_y2" value="<?php echo (int) $initial_selection[3]; ?>" />
-					</Modal>
+					<>
+						{ ! image ? (
+							<>
+								<Spinner />
+								{__('Loading Image Details...', 'wpcom-thumbnail-editor')}
+							</>
+						) : (
+							this.renderModal()
+						)}
+					</>
 				)}
 			</>
 		);
 	}
 }
+
+export default withSelect( (select, props) => {
+	const image = select( coreStore )
+		.getMedia( props?.id ) ?? null;
+
+	return {
+		image,
+		thumbnailEdits: image?.wpcom_thumbnail_edit,
+	};
+})(ThumbnailEditorModal);
