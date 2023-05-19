@@ -25,7 +25,7 @@ function waitForElm(selector) {
 
 const load = () => {
 	const domElement = document.getElementById('thumbnail');
-	const uiElement = createElement(ThumbnailEditorModal, { test: 'test' });
+	const uiElement = createElement(ThumbnailEditorModal, { test: domElement.dataset.url });
 
 	if (createRoot) {
 		createRoot(domElement).render(uiElement);

@@ -27,22 +27,26 @@ $gray-500: #bbb;
 @import "node_modules/@wordpress/base-styles/default-custom-properties";
 
 // Hack to fix the Tooltip position of the top-right side close button in a Modal component.
-.wpcom-thumbnail-editor {
+.wpcom-thumbnail-editor__overlay {
+	display: flex;
+	justify-content: center;
+	align-items: center;
 
-	&__screen-overlay {
-		display: flex;
-		justify-content: center;
-		align-items: center;
-	}
-
-	&__frame {
-		@include break-small {
-			transform: initial;
-			position: relative;
-			top: 0;
-			bottom: 0;
-			left: 0;
-			right: 0;
+	.components-modal {
+		&__frame {
+			@include break-small {
+				transform: initial;
+				position: relative;
+				top: 0;
+				bottom: 0;
+				left: 0;
+				right: 0;
+			}
 		}
+
 	}
+}
+
+#wpcom-thumbnail-edit {
+	width: 100%;
 }

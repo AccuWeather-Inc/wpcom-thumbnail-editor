@@ -158,8 +158,22 @@ class WPcom_Thumbnail_Editor {
 			|| in_array( $post_type, $supported_post_types, true )
 		) {
 			$build_info = $this->load_asset();
-			wp_enqueue_style( 'thumbnail-style', plugin_dir_url( __FILE__ ) . 'build/index.css', array( 'wp-components' ), $build_info['version'] );
-			wp_enqueue_script( 'thumbnail-script', plugin_dir_url( __FILE__ ) . 'build/index.js', $build_info['dependencies'], $build_info['version'], true );
+			wp_enqueue_script( 'imgareaselect' );
+			wp_enqueue_style( 'imgareaselect' );
+
+			wp_enqueue_style(
+				'thumbnail-style',
+				plugin_dir_url( __FILE__ ) . 'build/index.css',
+				array( 'wp-components' ),
+				$build_info['version']
+			);
+			wp_enqueue_script(
+				'thumbnail-script',
+				plugin_dir_url( __FILE__ ) . 'build/index.js',
+				$build_info['dependencies'],
+				$build_info['version'],
+				true
+			);
 		}
 	}
 
@@ -247,9 +261,50 @@ class WPcom_Thumbnail_Editor {
 
 			$html .= '<div>';
 
-		$html .= $this->generate_thumbnails_preview( $sizes, $attachment );
+		// key wont really matter if its not using a dimension map.
+		foreach ( $sizes as $key => $size ) {
+			$image_name = $this->use_ratio_map ? $key : $size;
+			$image_name = apply_filters( 'wpcom_thumbnail_editor_image_name', $image_name, $key, $size, $this->use_ratio_map );
 
-		$html .= '<div id="thumbnail">Loading...</div>';
+			$edit_url = admin_url( 'admin.php?action=wpcom_thumbnail_edit&id=' . intval( $attachment->ID ) . '&size=' . urlencode( $size ) );
+
+			// add an extra query var if were using a ratio map.
+			if ( $this->use_ratio_map ) {
+				$edit_url = add_query_arg( 'ratio', $key, $edit_url );
+			}
+
+			// We need to get the fullsize thumbnail so that the cropping is properly done.
+			$thumbnail = image_downsize( $attachment->ID, $size );
+
+			// Resize the thumbnail to fit into a small box so it's displayed at a reasonable size.
+			if ( function_exists( 'jetpack_photon_url' ) ) {
+				$thumbnail_url = jetpack_photon_url(
+					$thumbnail[0],
+					apply_filters( 'wpcom_thumbnail_editor_preview_args', array( 'fit' => array( 250, 250 ) ), $attachment->ID, $size )
+				);
+			} else {
+				$thumbnail_url = $thumbnail[0];
+			}
+
+			$html .= '<div style="float:left;margin:0 20px 20px 0;min-width:250px;">';
+			$html .= '<a href="' . esc_url( $edit_url ) . '"';
+
+
+			if ( 'media.php' != basename( filter_input( INPUT_SERVER, 'PHP_SELF', FILTER_SANITIZE_STRING ) ) ) {
+				$html .= ' target="_blank"';
+			}
+
+				$html     .= '>';
+					$html .= '<strong>' . esc_html( $image_name ) . '</strong><br />';
+					$html .= '<img src="' . esc_url( $thumbnail_url ) . '" alt="' . esc_attr( $size ) . '" />';
+				$html     .= '</a>';
+			$html         .= '</div>';
+		}
+
+		$html .= '</div>';
+		$html .= '</div>';
+
+		$html .= '<div id="thumbnail" data-url="' . $attachment->guid . '">Loading...</div>';
 
 		return $html;
 	}
@@ -484,7 +539,7 @@ class WPcom_Thumbnail_Editor {
 		<p>
 			<?php submit_button( null, 'primary', 'submit', false ); ?>
 			<?php submit_button( esc_html__( 'Reset Thumbnail', 'wpcom-thumbnail-editor' ), 'primary', 'wpcom_thumbnail_edit_reset', false ); ?>
-			<a href="<?php echo esc_url( admin_url( 'media.php?action=edit&attachment_id=' . $attachment->ID ) ); ?>" class="button"><?php esc_html_e( 'Cancel Changes', 'wpcom-thumbnail-editor' ); ?></a>
+			<a href="<?php echo esc_url( admin_url( 'post.php?action=edit&post=' . $attachment->ID ) ); ?>" class="button"><?php esc_html_e( 'Cancel Changes', 'wpcom-thumbnail-editor' ); ?></a>
 		</p>
 
 		<h3><?php esc_html_e( 'Fullsize Thumbnail Preview', 'wpcom-thumbnail-editor' ); ?></h3>
