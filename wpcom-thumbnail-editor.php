@@ -231,7 +231,7 @@ class WPcom_Thumbnail_Editor {
 	/**
 	 * Generates the HTML for the edit attachment field.
 	 *
-	 * @param object $attachment The attachment currently being edited.
+	 * @param \WP_Post $attachment The attachment currently being edited.
 	 * @return string The HTML for the form field.
 	 */
 	public function get_attachment_field_html( $attachment ) {
@@ -304,7 +304,11 @@ class WPcom_Thumbnail_Editor {
 		$html .= '</div>';
 		$html .= '</div>';
 
-		$html .= '<div id="thumbnail" data-url="' . $attachment->guid . '">Loading...</div>';
+		$html .= '<div id="thumbnail" ';
+		$html .= 'data-id="' . $attachment->ID;
+		$html .= '" data-url="' . $attachment->guid;
+		$html .= '" data-sizes="' . htmlspecialchars( wp_json_encode( $sizes ), ENT_QUOTES, 'UTF-8' );
+		$html .= '">Loading...</div>';
 
 		return $html;
 	}

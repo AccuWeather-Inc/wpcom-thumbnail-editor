@@ -1,7 +1,15 @@
 import ThumbnailEditorModal from './modal';
+import { store as coreStore } from '@wordpress/core-data';
 import './main.scss';
 
-const { createRoot, render, createElement } = wp.element;
+const {
+	element: {
+		render,
+		createRoot,
+		createElement,
+	},
+	data: { select },
+} = wp;
 
 function waitForElm(selector) {
 	return new Promise((resolve) => {
@@ -25,12 +33,26 @@ function waitForElm(selector) {
 
 const load = () => {
 	const domElement = document.getElementById('thumbnail');
-	const uiElement = createElement(ThumbnailEditorModal, { test: domElement.dataset.url });
+	if (domElement && domElement?.dataset?.id ) {
+		const ratioMap = domElement?.dataset?.sizes
+			? JSON.parse(domElement.dataset.sizes)
+			: [];
+		const props = {
+			id: domElement.dataset.id,
+			url: domElement.dataset?.url,
+			ratioMap,
+		};
+		console.log({
+			data: domElement?.dataset,
+			props,
+		});
+		const uiElement = createElement(ThumbnailEditorModal, props);
 
-	if (createRoot) {
-		createRoot(domElement).render(uiElement);
-	} else {
-		render(uiElement, domElement);
+		if (createRoot) {
+			createRoot(domElement).render(uiElement);
+		} else {
+			render(uiElement, domElement);
+		}
 	}
 };
 

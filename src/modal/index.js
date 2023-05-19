@@ -15,26 +15,33 @@ const {
 export default class ThumbnailEditorModal extends React.PureComponent {
 	// Define Prop for this component.
 	static defaultProps = {
-		test: '',
-		image: null,
-		thumbnails: [],
+		url: '',
+		ratioMap: [],
 	};
 
 	// Define PropTypes for this component.
 	static propTypes = {
-		test: PropTypes.string,
-		image: PropTypes.shape({
-			id: PropTypes.number,
-			width: PropTypes.number,
-			height: PropTypes.number,
-		}),
-		thumbnails: PropTypes.arrayOf(
-			PropTypes.shape({
-				crop: PropTypes.bool,
-				width: PropTypes.number,
-				height: PropTypes.number,
-				url: PropTypes.string,
-			}),
+		id: PropTypes.number.isRequired,
+		url: PropTypes.string.isRequired,
+		ratioMap: PropTypes.arrayOf(
+			PropTypes.objectOf(
+				PropTypes.shape({
+					ratio: PropTypes.string,
+					crops: PropTypes.arrayOf(
+						PropTypes.string,
+					),
+				}),
+			),
+		),
+		thumbnailEdits: PropTypes.arrayOf(
+			PropTypes.objectOf(
+				PropTypes.shape({
+					ratio: PropTypes.string,
+					dimens: PropTypes.arrayOf(
+						PropTypes.string,
+					),
+				}),
+			),
 		),
 	};
 
@@ -44,6 +51,7 @@ export default class ThumbnailEditorModal extends React.PureComponent {
 	 */
 	state = {
 		open: false,
+		image: null,
 		setOpen: (isOpen) => {
 			this.setState({
 				open: isOpen,
@@ -61,6 +69,10 @@ export default class ThumbnailEditorModal extends React.PureComponent {
 	 */
 	constructor(props) {
 		super(props);
+
+		/**
+		 * @todo need to fetch image details for state use.
+		 */
 	}
 
 	/**
@@ -78,9 +90,10 @@ export default class ThumbnailEditorModal extends React.PureComponent {
 				width,
 				height,
 			},
-		} = this.props;
-
-		const { thumbnail: { dimensions } } = this.state;
+			thumbnail: {
+				dimensions
+			}
+		} = this.state;
 
 		const scaleX = dimensions.width / ( selection.width || 1 );
 		const scaleY = dimensions.height / ( selection.height || 1 );
@@ -143,13 +156,12 @@ export default class ThumbnailEditorModal extends React.PureComponent {
 	 */
 	render() {
 		const {
-			test
+			url
 		} = this.props;
 		const {
 			open,
 			setOpen,
 		} = this.state;
-		console.log('qwdwqdqwd', test);
 
 		return (
 			<>
@@ -180,7 +192,7 @@ export default class ThumbnailEditorModal extends React.PureComponent {
 						</p>
 						<p>
 							<img
-								src={test}
+								src={url}
 								// width='1024'
 								// height='576'
 								id="wpcom-thumbnail-edit"
@@ -205,7 +217,7 @@ export default class ThumbnailEditorModal extends React.PureComponent {
 							{__('Fullsize Thumbnail Preview', 'wpcom-thumbnail-editor')}
 						</h3>
 						<div style={{overflow:'hidden', width:'150px', height:'150px'}}>
-							<img id="wpcom-thumbnail-edit-preview" class="hidden" src={test} />
+							<img id="wpcom-thumbnail-edit-preview" class="hidden" src={url} />
 						</div>
 
 						<input type="hidden" name="action" value="wpcom_thumbnail_edit" />

@@ -15,6 +15,7 @@
   "license": "ISC",
   "devDependencies": {
     "@wordpress/components": "^24.0.0",
+    "@wordpress/core-data": "^6.10.0",
     "@wordpress/dependency-extraction-webpack-plugin": "^4.16.0",
     "@wordpress/element": "^5.10.0",
     "@wordpress/i18n": "^4.33.0",
