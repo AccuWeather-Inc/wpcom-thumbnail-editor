@@ -31,7 +31,7 @@ const updatePreview = ( selection, { image, thumbnail } ) => {
 	const scaleY = thumbnail.height / ( selection.height || 1 );
 
 	// Update the preview image.
-	$('#wpcom-thumbnail-edit-preview').css({
+	$('#wpcom-thumbnail-edit-modal-preview').css({
 		width: Math.round( scaleX * width ) + 'px',
 		height: Math.round( scaleY * height ) + 'px',
 		marginLeft: '-' + Math.round( scaleX * selection.x1 ) + 'px',
@@ -84,6 +84,10 @@ class ThumbnailEditorModal extends React.PureComponent {
 				open: isOpen,
 			});
 		},
+		downsizedImage: {
+			width: 1,
+			height: 1,
+		},
 		thumbnail: {
 			width: 1,
 			height: 1,
@@ -103,16 +107,18 @@ class ThumbnailEditorModal extends React.PureComponent {
 			} = this.props;
 
 			const cropSizeName = ratioMap[ tabName ];
+			const coordinates = thumbnailEdits?.[ cropSizeName ];
 			const thumbnail = {
 				width: sizes[ cropSizeName ].width,
 				height: sizes[ cropSizeName ].height,
 				url: sizes[ cropSizeName ].source_url,
-				selection: {
-					x1: thumbnailEdits?.[ cropSizeName ]?.[0],
-					y1: thumbnailEdits?.[ cropSizeName ]?.[1],
-					x2: thumbnailEdits?.[ cropSizeName ]?.[2],
-					y2: thumbnailEdits?.[ cropSizeName ]?.[3],
-				},
+				selection: this.getSelectionCoordinates(
+					coordinates,
+					{
+						width: sizes[ cropSizeName ].width,
+						height: sizes[ cropSizeName ].height,
+					}
+				)
 			};
 
 			this.setState({
@@ -130,16 +136,101 @@ class ThumbnailEditorModal extends React.PureComponent {
 	}
 
 	/**
-	 * Get coordinates for thumbnail if they're already set.
-	 *
-	 * @todo: $coordinates       = $this->get_coordinates( $attachment->ID, $size );
+	 * Get downsized dimentions for image, typically the 'full' crop.
 	 */
-	getCoordinates() {
+	static getDownsized( sizes ) {
+		return {
+			width: sizes?.['full']?.width ?? 1,
+			height: sizes?.['full']?.height ?? 1,
+		};
+	}
 
+	getSelectionCoordinates( coordinates, thumbnail ) {
+		const { getDownsized } = this.constructor;
+		const {
+			image: {
+				media_details,
+			},
+		} = this.props;
+		const downsizedImg = getDownsized( media_details.sizes );
+		const setSelection = ( selected ) => {
+			return {
+				x1: selected?.[0] ?? 0,
+				y1: selected?.[1] ?? 0,
+				x2: selected?.[2] ?? 1,
+				y2: selected?.[3] ?? 1,
+			};
+		};
+
+		const originalAspectRatio = downsizedImg.width / downsizedImg.height;
+		const thumbnailAspectRatio = thumbnail.width / thumbnail.height;
+
+		let selection = [];
+		if ( coordinates ) {
+			const { width, height } = media_details;
+
+			// If original is bigger than display, scale down the coordinates to match the scaled down original.
+			if (
+				width > downsizedImg.width
+				|| height > downsizedImg.height
+			) {
+				// At what percentage is the image being displayed at?
+				const scale = downsizedImg.width / width;
+				const scaledCoordinates = [];
+				coordinates.forEach(coordinate => {
+					scaledCoordinates.push(
+						Math.round( coordinate * scale )
+					);
+				});
+				selection = setSelection( scaledCoordinates );
+			} else {
+				// Or the image was not downscaled, so the coordinates are correct.
+				selection = setSelection( coordinates );
+			}
+		} else if ( thumbnailAspectRatio === originalAspectRatio ) {
+			// If original and thumb are the same aspect ratio, then select the whole image.
+			selection = setSelection( [ 0, 0, downsizedImg.width, downsizedImg.height ] );
+		} else if ( thumbnailAspectRatio > originalAspectRatio ) {
+			// If the thumbnail is wider than the original, we want the full width.
+
+			// Take the width and divide by the thumbnail's aspect ratio.
+			const selected_height = Math.round(
+				downsizedImg.width / thumbnailAspectRatio
+			);
+			selection = setSelection([
+				0,                                                                   // Far left edge (due to aspect ratio comparison).
+				Math.round( ( downsizedImg.height / 2 ) - ( selected_height / 2 ) ), // Mid-point + half of height of selection.
+				downsizedImg.width,                                                  // Far right edge (due to aspect ratio comparison).
+				Math.round( ( downsizedImg.height / 2 ) + ( selected_height / 2 ) ), // Mid-point - half of height of selection.
+			]);
+		} else {
+			// The thumbnail must be narrower than the original, so we want the full height.
+
+			// Take the width and divide by the thumbnail's aspect ratio.
+			const selected_width = Math.round(
+				downsizedImg.width / thumbnailAspectRatio
+			);
+
+			selection = setSelection([
+				round( ( downsizedImg.width / 2 ) - ( selected_width / 2 ) ), // Mid-point + half of height of selection.
+				0,                                                            // Top edge (due to aspect ratio comparison).
+				round( ( downsizedImg.width / 2 ) + ( selected_width / 2 ) ), // Mid-point - half of height of selection.
+				downsizedImg.height,                                          // Bottom edge (due to aspect ratio comparison).
+			]);
+		}
+
+		return selection;
 	}
 
 	initImgAreaSelect() {
-		const { image } = this.props;
+		const { getDownsized } = this.constructor;
+		const {
+			image: {
+				media_details: {
+					sizes,
+				},
+			},
+		} = this.props;
 		const {
 			thumbnail: {
 				width,
@@ -147,6 +238,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 				selection,
 			},
 		} = this.state;
+		const image = getDownsized( sizes );
 
 		const imgAreaSelectArgs = {
 			aspectRatio: width + ':' + height,
@@ -161,12 +253,12 @@ class ThumbnailEditorModal extends React.PureComponent {
 			// Update the preview.
 			onInit: function ( img, selection ) {
 				updatePreview( selection, { image, thumbnail: { width, height } } );
-				$('#wpcom-thumbnail-edit-preview').show();
-				$('#wpcom-thumbnail-edit').trigger('wpcom_thumbnail_edit_init');
+				$('#wpcom-thumbnail-edit-modal-preview').show();
+				$('#wpcom-thumbnail-edit-modal').trigger('wpcom_thumbnail_edit_init');
 			},
 			onSelectChange: function ( img, selection ) {
 				updatePreview( selection, { image, thumbnail: { width, height } } );
-				$('#wpcom-thumbnail-edit').trigger('wpcom_thumbnail_edit_change');
+				$('#wpcom-thumbnail-edit-modal').trigger('wpcom_thumbnail_edit_change');
 			},
 
 			// Fill the hidden fields with the selected coordinates for the form.
@@ -175,20 +267,22 @@ class ThumbnailEditorModal extends React.PureComponent {
 				$('input[name="wpcom_thumbnail_edit_y1"]').val(selection.y1);
 				$('input[name="wpcom_thumbnail_edit_x2"]').val(selection.x2);
 				$('input[name="wpcom_thumbnail_edit_y2"]').val(selection.y2);
-				$('#wpcom-thumbnail-edit').trigger('wpcom_thumbnail_edit_selectend');
+				$('#wpcom-thumbnail-edit-modal').trigger('wpcom_thumbnail_edit_selectend');
 			}
 		};
+
 		console.log({
 			text: 'Running area select..',
 			imgAreaSelectArgs,
 		});
 
-		jQuery(document).ready(function($){
-			$('#wpcom-thumbnail-edit').imgAreaSelect(imgAreaSelectArgs);
+		jQuery(document).ready(function($) {
+			$('#wpcom-thumbnail-edit-modal').imgAreaSelect(imgAreaSelectArgs);
 		});
 	}
 
 	renderTabView(tab) {
+		const { getDownsized } = this.constructor;
 		const {
 			id,
 			image: {
@@ -206,10 +300,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 		} = this.state;
 
 		const cropSizeName = ratioMap[ tab.name ];
-		const full = {
-			width: sizes['full'].width,
-			height: sizes['full'].height,
-		};
+		const full = getDownsized( sizes );
 
 		if ( ! thumbnail ) {
 			setThumbnail( tab.name );
@@ -231,7 +322,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 						src={link}
 						width={full.width}
 						height={full.height}
-						id="wpcom-thumbnail-edit"
+						id="wpcom-thumbnail-edit-modal"
 						alt=""
 					/>
 				</p>
@@ -253,7 +344,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 					{__('Fullsize Thumbnail Preview', 'wpcom-thumbnail-editor')}
 				</h3>
 				<div style={{overflow:'hidden', width: thumbnail.width + 'px', height: thumbnail.height + 'px'}}>
-					<img id="wpcom-thumbnail-edit-preview" class="hidden" src={link} />
+					<img id="wpcom-thumbnail-edit-modal-preview" class="hidden" src={link} />
 				</div>
 
 				<input type="hidden" name="action" value="wpcom_thumbnail_edit" />
