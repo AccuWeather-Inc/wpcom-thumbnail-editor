@@ -114,7 +114,8 @@ class ThumbnailEditorModal extends React.PureComponent {
 				thumbnailEdits,
 			} = this.props;
 
-			const cropSizeName = ratioMap[ tabName ];
+			const name = tabName.replace('-by-', ':');
+			const cropSizeName = ratioMap[ name ];
 			const coordinates = thumbnailEdits?.[ cropSizeName ];
 			const thumbnail = {
 				width: sizes[ cropSizeName ].width,
@@ -148,7 +149,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 		for (const [key, val] of Object.entries(ratioMap)) {
 			this.tabRefs[ key ] = React.createRef();
 			this.tabList.push({
-				name: key,
+				name: key.replace(':', '-by-'),
 				title: key,
 				className: 'tab-' + key.replace(':', '-by-'),
 			});
@@ -254,8 +255,6 @@ class ThumbnailEditorModal extends React.PureComponent {
 		const scaleX = thumbnail.width / ( selection.width || 1 );
 		const scaleY = thumbnail.height / ( selection.height || 1 );
 
-		console.log("Running preview update...");
-
 		// Update the preview image.
 		$('#wpcom-thumbnail-edit-modal-preview').css({
 			width: Math.round( scaleX * width ) + 'px',
@@ -300,7 +299,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 
 		const imgAreaSelectArgs = {
 			aspectRatio: width + ':' + height,
-			// parent: '.my-tab-panel',
+			parent: '.wpcom-thumbnail-editor__overlay',
 			handles: true,
 
 			// Initial selection.
@@ -335,7 +334,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 			imgAreaSelectArgs,
 		});
 
-		jQuery(modalTab).ready(($) => {
+		jQuery(document).ready(($) => {
 			$('#wpcom-thumbnail-edit-modal').imgAreaSelect(imgAreaSelectArgs);
 		});
 	}
