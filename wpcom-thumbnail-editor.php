@@ -488,6 +488,8 @@ class WPcom_Thumbnail_Editor {
 					var scaleX = thumb_width / ( selection.width || 1 );
 					var scaleY = thumb_height / ( selection.height || 1 );
 
+					console.log("Running preview update...");
+
 					// Update the preview image.
 					$('#wpcom-thumbnail-edit-preview').css({
 						width: Math.round( scaleX * img_width ) + 'px',
@@ -496,8 +498,7 @@ class WPcom_Thumbnail_Editor {
 						marginTop: '-' + Math.round( scaleY * selection.y1 ) + 'px'
 					});
 				}
-
-				$('#wpcom-thumbnail-edit').imgAreaSelect({
+				const imgAreaSelectArgs = {
 					aspectRatio: '<?php echo intval( $thumbnail_dimensions['width'] ) . ':' . intval( $thumbnail_dimensions['height'] ); ?>',
 					handles: true,
 
@@ -526,7 +527,14 @@ class WPcom_Thumbnail_Editor {
 						$('input[name="wpcom_thumbnail_edit_y2"]').val(selection.y2);
 						$('#wpcom-thumbnail-edit').trigger('wpcom_thumbnail_edit_selectend');
 					}
+				};
+
+				console.log({
+					text: 'Running area select..',
+					imgAreaSelectArgs,
 				});
+
+				$('#wpcom-thumbnail-edit').imgAreaSelect(imgAreaSelectArgs);
 			});
 		</script>
 

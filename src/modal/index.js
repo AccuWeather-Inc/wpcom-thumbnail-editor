@@ -18,26 +18,17 @@ const {
 		addQueryArgs,
 	},
 	data: { withSelect },
+	element: { useRef },
+	compose: {
+		useInstanceId,
+		useFocusReturn,
+		useFocusOnMount,
+		__experimentalUseFocusOutside: useFocusOutside,
+		useConstrainedTabbing,
+		useMergeRefs,
+	},
 } = wp;
 
-
-const updatePreview = ( selection, { image, thumbnail } ) => {
-	const {
-		width,
-		height,
-	} = image;
-
-	const scaleX = thumbnail.width / ( selection.width || 1 );
-	const scaleY = thumbnail.height / ( selection.height || 1 );
-
-	// Update the preview image.
-	$('#wpcom-thumbnail-edit-modal-preview').css({
-		width: Math.round( scaleX * width ) + 'px',
-		height: Math.round( scaleY * height ) + 'px',
-		marginLeft: '-' + Math.round( scaleX * selection.x1 ) + 'px',
-		marginTop: '-' + Math.round( scaleY * selection.y1 ) + 'px'
-	});
-}
 class ThumbnailEditorModal extends React.PureComponent {
 	// Define Prop for this component.
 	static defaultProps = {
@@ -49,7 +40,24 @@ class ThumbnailEditorModal extends React.PureComponent {
 	// Define PropTypes for this component.
 	static propTypes = {
 		id: PropTypes.number.isRequired,
-		image: PropTypes.string,
+		image: PropTypes.instanceOf(Object),
+		tabs: PropTypes.objectOf(
+			PropTypes.shape({
+				tabList: PropTypes.arrayOf(
+					PropTypes.objectOf(
+						PropTypes.shape({
+							name: PropTypes.string,
+							title: PropTypes.string,
+							className: PropTypes.string,
+						}),
+					),
+				),
+				tabRefs: PropTypes.oneOfType([
+					PropTypes.func,
+					PropTypes.shape({ current: PropTypes.instanceOf(Element) })
+				]),
+			}),
+		),
 		ratioMap: PropTypes.arrayOf(
 			PropTypes.objectOf(
 				PropTypes.shape({
@@ -133,7 +141,22 @@ class ThumbnailEditorModal extends React.PureComponent {
 	 */
 	constructor(props) {
 		super(props);
+
+		const { ratioMap } = props;
+		this.tabRefs = {};
+		this.tabList = [];
+		for (const [key, val] of Object.entries(ratioMap)) {
+			this.tabRefs[ key ] = React.createRef();
+			this.tabList.push({
+				name: key,
+				title: key,
+				className: 'tab-' + key.replace(':', '-by-'),
+			});
+		}
+		this.currentTabRef = React.createRef();
 	}
+
+	componentDidMount() {}
 
 	/**
 	 * Get downsized dimentions for image, typically the 'full' crop.
@@ -222,26 +245,62 @@ class ThumbnailEditorModal extends React.PureComponent {
 		return selection;
 	}
 
-	initImgAreaSelect() {
-		const { getDownsized } = this.constructor;
+	static updatePreview = ( selection, { image, thumbnail } ) => {
 		const {
-			image: {
-				media_details: {
-					sizes,
+			width,
+			height,
+		} = image;
+
+		const scaleX = thumbnail.width / ( selection.width || 1 );
+		const scaleY = thumbnail.height / ( selection.height || 1 );
+
+		console.log("Running preview update...");
+
+		// Update the preview image.
+		$('#wpcom-thumbnail-edit-modal-preview').css({
+			width: Math.round( scaleX * width ) + 'px',
+			height: Math.round( scaleY * height ) + 'px',
+			marginLeft: '-' + Math.round( scaleX * selection.x1 ) + 'px',
+			marginTop: '-' + Math.round( scaleY * selection.y1 ) + 'px'
+		});
+	}
+
+	initImgAreaSelect() {
+		const {
+			currentTabRef,
+			currentTabRef: {
+				current: imgSel,
+			},
+			// previewRef: {
+			// 	current: previewImgSel,
+			// },
+			constructor: {
+				getDownsized,
+				updatePreview,
+			},
+			props: {
+				image: {
+					media_details: {
+						sizes,
+					},
 				},
 			},
-		} = this.props;
-		const {
-			thumbnail: {
-				width,
-				height,
-				selection,
+			state: {
+				thumbnail: {
+					width,
+					height,
+					selection,
+				},
 			},
-		} = this.state;
+		} = this;
 		const image = getDownsized( sizes );
+		const modalTab = $(imgSel);
+
+		console.log({ currentTabRef, modalTab, thumbnail: this.state.thumbnail });
 
 		const imgAreaSelectArgs = {
 			aspectRatio: width + ':' + height,
+			// parent: '.my-tab-panel',
 			handles: true,
 
 			// Initial selection.
@@ -254,11 +313,11 @@ class ThumbnailEditorModal extends React.PureComponent {
 			onInit: function ( img, selection ) {
 				updatePreview( selection, { image, thumbnail: { width, height } } );
 				$('#wpcom-thumbnail-edit-modal-preview').show();
-				$('#wpcom-thumbnail-edit-modal').trigger('wpcom_thumbnail_edit_init');
+				$('#wpcom-thumbnail-edit-modal').trigger('wpcom_thumbnail_edit_modal_init');
 			},
 			onSelectChange: function ( img, selection ) {
 				updatePreview( selection, { image, thumbnail: { width, height } } );
-				$('#wpcom-thumbnail-edit-modal').trigger('wpcom_thumbnail_edit_change');
+				$('#wpcom-thumbnail-edit-modal').trigger('wpcom_thumbnail_edit_modal_change');
 			},
 
 			// Fill the hidden fields with the selected coordinates for the form.
@@ -267,7 +326,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 				$('input[name="wpcom_thumbnail_edit_y1"]').val(selection.y1);
 				$('input[name="wpcom_thumbnail_edit_x2"]').val(selection.x2);
 				$('input[name="wpcom_thumbnail_edit_y2"]').val(selection.y2);
-				$('#wpcom-thumbnail-edit-modal').trigger('wpcom_thumbnail_edit_selectend');
+				$('#wpcom-thumbnail-edit-modal').trigger('wpcom_thumbnail_edit_modal_selectend');
 			}
 		};
 
@@ -276,29 +335,34 @@ class ThumbnailEditorModal extends React.PureComponent {
 			imgAreaSelectArgs,
 		});
 
-		jQuery(document).ready(function($) {
+		jQuery(modalTab).ready(($) => {
 			$('#wpcom-thumbnail-edit-modal').imgAreaSelect(imgAreaSelectArgs);
 		});
 	}
 
 	renderTabView(tab) {
-		const { getDownsized } = this.constructor;
 		const {
-			id,
-			image: {
-				link,
-				media_details: {
-					sizes,
+			props,
+			tabRefs: refs,
+			constructor: { getDownsized },
+			props: {
+				id,
+				image: {
+					link,
+					media_details: {
+						sizes,
+					},
 				},
+				ratioMap,
 			},
-			ratioMap,
-		} = this.props;
+			state: {
+				thumbnail,
+				setThumbnail,
+			},
+			currentTabRef,
+		} = this;
 
-		const {
-			thumbnail,
-			setThumbnail,
-		} = this.state;
-
+		const ref = refs[ tab.name ];
 		const cropSizeName = ratioMap[ tab.name ];
 		const full = getDownsized( sizes );
 
@@ -306,8 +370,13 @@ class ThumbnailEditorModal extends React.PureComponent {
 			setThumbnail( tab.name );
 		}
 
+		console.log({
+			obj: this,
+			props: props,
+		});
+
 		return (
-			<div className={tab.className}>
+			<div className={tab.className} ref={currentTabRef}>
 				<h2>
 					{__( 'Edit Thumbnail: ', 'wpcom-thumbnail-editor') + tab.title }
 				</h2>
@@ -317,12 +386,13 @@ class ThumbnailEditorModal extends React.PureComponent {
 						'wpcom-thumbnail-editor'
 					)}
 				</p>
-				<p>
+				<p className='wpcom-edit-thumbnail-editor'>
 					<img
 						src={link}
 						width={full.width}
 						height={full.height}
 						id="wpcom-thumbnail-edit-modal"
+						// ref={(ref) => this.currentTabRef = ref }
 						alt=""
 					/>
 				</p>
@@ -344,10 +414,15 @@ class ThumbnailEditorModal extends React.PureComponent {
 					{__('Fullsize Thumbnail Preview', 'wpcom-thumbnail-editor')}
 				</h3>
 				<div style={{overflow:'hidden', width: thumbnail.width + 'px', height: thumbnail.height + 'px'}}>
-					<img id="wpcom-thumbnail-edit-modal-preview" class="hidden" src={link} />
+					<img
+						id="wpcom-thumbnail-edit-modal-preview"
+						className="hidden"
+						src={link}
+						// ref={(ref) => this.currentTabRef = ref }
+					/>
 				</div>
 
-				<input type="hidden" name="action" value="wpcom_thumbnail_edit" />
+				<input type="hidden" name="action" value="wpcom_thumbnail_edit_modal" />
 				<input type="hidden" name="id" value={id} />
 				<input type="hidden" name="size" value={cropSizeName} />
 
@@ -374,26 +449,12 @@ class ThumbnailEditorModal extends React.PureComponent {
 
 	renderModal() {
 		const {
-			setOpen,
-			setThumbnail,
-		} = this.state;
-
-		const getTabList = () => {
-			const { ratioMap } = this.props;
-			let tabList = [];
-			for (const [key, val] of Object.entries(ratioMap)) {
-				tabList.push({
-					name: key,
-					title: key,
-					className: 'tab-' + key,
-				});
-			}
-			return tabList;
-		};
-
-		console.log({
-			props: this.props,
-		});
+			state: {
+				setOpen,
+				setThumbnail,
+			},
+			tabList,
+		} = this;
 
 		return (
 			<Modal
@@ -406,7 +467,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 			>
 				<TabPanel
 					className="my-tab-panel"
-					tabs={ getTabList() }
+					tabs={ tabList }
 					onSelect={ ( tabName ) => setThumbnail( tabName ) }
 				>
 					{ ( tab ) => this.renderTabView( tab )}
@@ -421,13 +482,12 @@ class ThumbnailEditorModal extends React.PureComponent {
 	 */
 	render() {
 		const {
-			image,
-		} = this.props;
-
-		const {
-			open,
-			setOpen,
-		} = this.state;
+			props: { image },
+			state: {
+				open,
+				setOpen,
+			},
+		} = this;
 
 		return (
 			<>
