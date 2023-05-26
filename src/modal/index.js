@@ -161,29 +161,37 @@ class ThumbnailEditorModal extends React.PureComponent {
 
 	onReady() {
 		const {
-			props: {
-				image: { media_details: { sizes } },
-			},
 			state: {
 				thumbnail: {
-					selection,
-					selection: {
-						x1: left,
-						y1: top,
-					},
+					width,
+					height,
+					selection: { x1, y1, x2 },
 				},
 			},
 			cropperRef: { current },
-			constructor: { getDownsized },
 		} = this;
-		const val = {
-			...getDownsized( sizes ),
-			left,
-			top,
-		};
-		console.log({selection, val});
+
+		let cropArea = null;
+		const aspectRatio = width / height;
+		if (1 === aspectRatio) {
+			cropArea = {
+				left: x1,
+				width: x2,
+			};
+		} else if ( (4 / 3) === aspectRatio) {
+			cropArea = {
+				top: y1,
+				width: x2,
+			};
+		} else if ( (16 / 9) === aspectRatio) {
+			cropArea = {
+				left: x1,
+				top: y1,
+			};
+		}
+
 		const cropper = current?.cropper;
-		cropper?.setCropBoxData(val);
+		cropArea && cropper?.setCropBoxData(cropArea);
 	}
 
 	onCrop() {
@@ -233,7 +241,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 				// Or the image was not downscaled, so the coordinates are correct.
 				selection = setSelection( coordinates );
 			}
-		} else if ( thumbnailAspectRatio === originalAspectRatio ) {
+		} else if ( thumbnailAspectRatio == originalAspectRatio ) {
 			// If original and thumb are the same aspect ratio, then select the whole image.
 			selection = setSelection( [ 0, 0, downsizedImg.width, downsizedImg.height ] );
 		} else if ( thumbnailAspectRatio > originalAspectRatio ) {
@@ -254,7 +262,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 
 			// Take the width and divide by the thumbnail's aspect ratio.
 			const selected_width = Math.round(
-				downsizedImg.width / thumbnailAspectRatio
+				downsizedImg.width / ( downsizedImg.height / downsizedImg.width )
 			);
 
 			selection = setSelection([
@@ -306,7 +314,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 				scalable={false}
 				rotatable={false}
 				ref={cropperRef}
-				// preview={previewRef}
+				preview="#wpcom-thumbnail-edit-modal-preview"
 			/>
 		);
 	}
@@ -327,7 +335,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 		if ( ! thumbnail ) {
 			setThumbnail( tab.name );
 		}
-
+		console.log({tab: this});
 		return (
 			<div className={tab.className}>
 				<h2>
