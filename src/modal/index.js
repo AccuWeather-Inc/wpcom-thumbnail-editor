@@ -7,7 +7,7 @@ import {
 	TabPanel,
 } from '@wordpress/components';
 import { store as coreStore } from '@wordpress/core-data';
-import Cropper, { ReactCropperElement } from "react-cropper";
+import Cropper from "react-cropper";
 import "cropperjs/dist/cropper.css";
 import PropTypes from 'prop-types';
 
@@ -133,19 +133,18 @@ class ThumbnailEditorModal extends React.PureComponent {
 		super(props);
 
 		const { ratioMap } = props;
-		this.tabRefs = {};
 		this.tabList = [];
 		for (const [key, val] of Object.entries(ratioMap)) {
-			this.tabRefs[ key ] = React.createRef();
 			this.tabList.push({
 				name: key.replace(':', '-by-'),
 				title: key,
 				className: 'tab-' + key.replace(':', '-by-'),
 			});
 		}
-		this.currentTabRef = React.createRef();
+
+		this.cropperRef = React.createRef();
 		this.onCrop = this.onCrop.bind(this);
-		this.getMoveCoordinates = this.getMoveCoordinates.bind(this);
+		this.onReady = this.onReady.bind(this);
 	}
 
 	componentDidMount() {}
@@ -158,6 +157,38 @@ class ThumbnailEditorModal extends React.PureComponent {
 			width: sizes?.['full']?.width ?? 1,
 			height: sizes?.['full']?.height ?? 1,
 		};
+	}
+
+	onReady() {
+		const {
+			props: {
+				image: { media_details: { sizes } },
+			},
+			state: {
+				thumbnail: {
+					selection,
+					selection: {
+						x1: left,
+						y1: top,
+					},
+				},
+			},
+			cropperRef: { current },
+			constructor: { getDownsized },
+		} = this;
+		const val = {
+			...getDownsized( sizes ),
+			left,
+			top,
+		};
+		console.log({selection, val});
+		const cropper = current?.cropper;
+		cropper?.setCropBoxData(val);
+	}
+
+	onCrop() {
+		const cropper = this.cropperRef.current?.cropper;
+		console.log(cropper?.getCropBoxData());
 	}
 
 	getSelectionCoordinates( coordinates, thumbnail ) {
@@ -237,46 +268,8 @@ class ThumbnailEditorModal extends React.PureComponent {
 		return selection;
 	}
 
-	onCrop() {
-		const cropper = this.currentTabRef.current?.cropper;
-		// console.log(cropper?.getCroppedCanvas());
-	}
-
-	getMoveCoordinates() {
-		const {
-			props: {
-				image: {
-					media_details: {
-						sizes,
-					},
-				},
-			},
-			state: {
-				thumbnail,
-				thumbnail: {
-					selection,
-				},
-			},
-			constructor: {
-				getDownsized,
-			},
-		} = this;
-		const image = getDownsized( sizes );
-
-		const scaleX = thumbnail.width / ( selection.width || 1 );
-		const scaleY = thumbnail.height / ( selection.height || 1 );
-
-		return {
-			width: Math.round( scaleX * image.width ),
-			height: Math.round( scaleY * image.height ),
-			x: - Math.round( scaleX * selection.x1 ),
-			y: - Math.round( scaleY * selection.y1 ),
-		};
-	}
-
 	imgCropper() {
 		const {
-			currentTabRef,
 			constructor: { getDownsized },
 			props: {
 				image: {
@@ -293,6 +286,8 @@ class ThumbnailEditorModal extends React.PureComponent {
 				},
 			},
 			onCrop,
+			onReady,
+			cropperRef,
 		} = this;
 		const full = getDownsized( sizes );
 
@@ -306,25 +301,22 @@ class ThumbnailEditorModal extends React.PureComponent {
 				aspectRatio={width / height}
 				// guides={false}
 				crop={onCrop}
-				ref={currentTabRef}
+				ready={onReady}
+				zoomable={false}
+				scalable={false}
+				rotatable={false}
+				ref={cropperRef}
+				// preview={previewRef}
 			/>
 		);
 	}
 
 	renderTabView(tab) {
 		const {
-			props,
-			tabRefs: refs,
-			constructor: { getDownsized },
 			props: {
-				id,
 				image: {
 					link,
-					media_details: {
-						sizes,
-					},
 				},
-				ratioMap,
 			},
 			state: {
 				thumbnail,
@@ -332,18 +324,9 @@ class ThumbnailEditorModal extends React.PureComponent {
 			},
 		} = this;
 
-		const ref = refs[ tab.name ];
-		const cropSizeName = ratioMap[ tab.name ];
-		const full = getDownsized( sizes );
-
 		if ( ! thumbnail ) {
 			setThumbnail( tab.name );
 		}
-
-		console.log({
-			obj: this,
-			props: props,
-		});
 
 		return (
 			<div className={tab.className}>
@@ -357,16 +340,6 @@ class ThumbnailEditorModal extends React.PureComponent {
 					)}
 				</p>
 				{this.imgCropper()}
-				{/* <p className='wpcom-edit-thumbnail-editor'>
-					<img
-						src={link}
-						width={full.width}
-						height={full.height}
-						id="wpcom-thumbnail-edit-modal"
-						// ref={(ref) => this.currentTabRef = ref }
-						alt=""
-					/>
-				</p> */}
 				<Button
 					variant="primary"
 					onClick={() => null}
@@ -387,7 +360,6 @@ class ThumbnailEditorModal extends React.PureComponent {
 						id="wpcom-thumbnail-edit-modal-preview"
 						className="hidden"
 						src={link}
-						// ref={(ref) => this.currentTabRef = ref }
 					/>
 				</div>
 			</div>
