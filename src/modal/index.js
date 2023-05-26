@@ -7,26 +7,15 @@ import {
 	TabPanel,
 } from '@wordpress/components';
 import { store as coreStore } from '@wordpress/core-data';
+import Cropper, { ReactCropperElement } from "react-cropper";
+import "cropperjs/dist/cropper.css";
 import PropTypes from 'prop-types';
 
 const {
 	i18n: {
 		__,
 	},
-	apiFetch,
-	url: {
-		addQueryArgs,
-	},
 	data: { withSelect },
-	element: { useRef },
-	compose: {
-		useInstanceId,
-		useFocusReturn,
-		useFocusOnMount,
-		__experimentalUseFocusOutside: useFocusOutside,
-		useConstrainedTabbing,
-		useMergeRefs,
-	},
 } = wp;
 
 class ThumbnailEditorModal extends React.PureComponent {
@@ -155,6 +144,8 @@ class ThumbnailEditorModal extends React.PureComponent {
 			});
 		}
 		this.currentTabRef = React.createRef();
+		this.onCrop = this.onCrop.bind(this);
+		this.getMoveCoordinates = this.getMoveCoordinates.bind(this);
 	}
 
 	componentDidMount() {}
@@ -246,39 +237,50 @@ class ThumbnailEditorModal extends React.PureComponent {
 		return selection;
 	}
 
-	static updatePreview = ( selection, { image, thumbnail } ) => {
+	onCrop() {
+		const cropper = this.currentTabRef.current?.cropper;
+		// console.log(cropper?.getCroppedCanvas());
+	}
+
+	getMoveCoordinates() {
 		const {
-			width,
-			height,
-		} = image;
+			props: {
+				image: {
+					media_details: {
+						sizes,
+					},
+				},
+			},
+			state: {
+				thumbnail,
+				thumbnail: {
+					selection,
+				},
+			},
+			constructor: {
+				getDownsized,
+			},
+		} = this;
+		const image = getDownsized( sizes );
 
 		const scaleX = thumbnail.width / ( selection.width || 1 );
 		const scaleY = thumbnail.height / ( selection.height || 1 );
 
-		// Update the preview image.
-		$('#wpcom-thumbnail-edit-modal-preview').css({
-			width: Math.round( scaleX * width ) + 'px',
-			height: Math.round( scaleY * height ) + 'px',
-			marginLeft: '-' + Math.round( scaleX * selection.x1 ) + 'px',
-			marginTop: '-' + Math.round( scaleY * selection.y1 ) + 'px'
-		});
+		return {
+			width: Math.round( scaleX * image.width ),
+			height: Math.round( scaleY * image.height ),
+			x: - Math.round( scaleX * selection.x1 ),
+			y: - Math.round( scaleY * selection.y1 ),
+		};
 	}
 
-	initImgAreaSelect() {
+	imgCropper() {
 		const {
 			currentTabRef,
-			currentTabRef: {
-				current: imgSel,
-			},
-			// previewRef: {
-			// 	current: previewImgSel,
-			// },
-			constructor: {
-				getDownsized,
-				updatePreview,
-			},
+			constructor: { getDownsized },
 			props: {
 				image: {
+					link,
 					media_details: {
 						sizes,
 					},
@@ -288,55 +290,25 @@ class ThumbnailEditorModal extends React.PureComponent {
 				thumbnail: {
 					width,
 					height,
-					selection,
 				},
 			},
+			onCrop,
 		} = this;
-		const image = getDownsized( sizes );
-		const modalTab = $(imgSel);
+		const full = getDownsized( sizes );
 
-		console.log({ currentTabRef, modalTab, thumbnail: this.state.thumbnail });
-
-		const imgAreaSelectArgs = {
-			aspectRatio: width + ':' + height,
-			parent: '.wpcom-thumbnail-editor__overlay',
-			handles: true,
-
-			// Initial selection.
-			x1: selection.x1,
-			y1: selection.y1,
-			x2: selection.x2,
-			y2: selection.y2,
-
-			// Update the preview.
-			onInit: function ( img, selection ) {
-				updatePreview( selection, { image, thumbnail: { width, height } } );
-				$('#wpcom-thumbnail-edit-modal-preview').show();
-				$('#wpcom-thumbnail-edit-modal').trigger('wpcom_thumbnail_edit_modal_init');
-			},
-			onSelectChange: function ( img, selection ) {
-				updatePreview( selection, { image, thumbnail: { width, height } } );
-				$('#wpcom-thumbnail-edit-modal').trigger('wpcom_thumbnail_edit_modal_change');
-			},
-
-			// Fill the hidden fields with the selected coordinates for the form.
-			onSelectEnd: function ( img, selection ) {
-				$('input[name="wpcom_thumbnail_edit_x1"]').val(selection.x1);
-				$('input[name="wpcom_thumbnail_edit_y1"]').val(selection.y1);
-				$('input[name="wpcom_thumbnail_edit_x2"]').val(selection.x2);
-				$('input[name="wpcom_thumbnail_edit_y2"]').val(selection.y2);
-				$('#wpcom-thumbnail-edit-modal').trigger('wpcom_thumbnail_edit_modal_selectend');
-			}
-		};
-
-		console.log({
-			text: 'Running area select..',
-			imgAreaSelectArgs,
-		});
-
-		jQuery(document).ready(($) => {
-			$('#wpcom-thumbnail-edit-modal').imgAreaSelect(imgAreaSelectArgs);
-		});
+		return (
+			<Cropper
+				className='wpcom-edit-thumbnail-editor'
+				src={link}
+				style={{ width: full.width, height: full.height }}
+				// Cropper.js options
+				initialAspectRatio={full.width / full.height}
+				aspectRatio={width / height}
+				// guides={false}
+				crop={onCrop}
+				ref={currentTabRef}
+			/>
+		);
 	}
 
 	renderTabView(tab) {
@@ -358,7 +330,6 @@ class ThumbnailEditorModal extends React.PureComponent {
 				thumbnail,
 				setThumbnail,
 			},
-			currentTabRef,
 		} = this;
 
 		const ref = refs[ tab.name ];
@@ -375,7 +346,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 		});
 
 		return (
-			<div className={tab.className} ref={currentTabRef}>
+			<div className={tab.className}>
 				<h2>
 					{__( 'Edit Thumbnail: ', 'wpcom-thumbnail-editor') + tab.title }
 				</h2>
@@ -385,7 +356,8 @@ class ThumbnailEditorModal extends React.PureComponent {
 						'wpcom-thumbnail-editor'
 					)}
 				</p>
-				<p className='wpcom-edit-thumbnail-editor'>
+				{this.imgCropper()}
+				{/* <p className='wpcom-edit-thumbnail-editor'>
 					<img
 						src={link}
 						width={full.width}
@@ -394,21 +366,19 @@ class ThumbnailEditorModal extends React.PureComponent {
 						// ref={(ref) => this.currentTabRef = ref }
 						alt=""
 					/>
-				</p>
-				<p>
-					<Button
-						variant="primary"
-						onClick={() => null}
-					>
-						{__('Reset Thumbnail', 'wpcom-thumbnail-editor')}
-					</Button>
-					<Button
-						variant="primary"
-						onClick={() => null}
-					>
-						{__('Save Changes', 'wpcom-thumbnail-editor')}
-					</Button>
-				</p>
+				</p> */}
+				<Button
+					variant="primary"
+					onClick={() => null}
+				>
+					{__('Reset Thumbnail', 'wpcom-thumbnail-editor')}
+				</Button>
+				<Button
+					variant="primary"
+					onClick={() => null}
+				>
+					{__('Save Changes', 'wpcom-thumbnail-editor')}
+				</Button>
 				<h3>
 					{__('Fullsize Thumbnail Preview', 'wpcom-thumbnail-editor')}
 				</h3>
@@ -420,28 +390,6 @@ class ThumbnailEditorModal extends React.PureComponent {
 						// ref={(ref) => this.currentTabRef = ref }
 					/>
 				</div>
-
-				<input type="hidden" name="action" value="wpcom_thumbnail_edit_modal" />
-				<input type="hidden" name="id" value={id} />
-				<input type="hidden" name="size" value={cropSizeName} />
-
-				{/*
-				* Since the fullsize image is possibly scaled down, we need to record at what size it was
-				* displayed at so the we can scale up the new selection dimensions to the fullsize image.
-				*/}
-				<input type="hidden" name="wpcom_thumbnail_edit_display_width"  value={thumbnail.width} />
-				<input type="hidden" name="wpcom_thumbnail_edit_display_height" value={thumbnail.height} />
-
-				{/* <!-- These are manipulated via Javascript to submit the selected values --> */}
-				<input type="hidden" name="wpcom_thumbnail_edit_x1" value={thumbnail.selection.x1} />
-				<input type="hidden" name="wpcom_thumbnail_edit_y1" value={thumbnail.selection.y1} />
-				<input type="hidden" name="wpcom_thumbnail_edit_x2" value={thumbnail.selection.x2} />
-				<input type="hidden" name="wpcom_thumbnail_edit_y2" value={thumbnail.selection.y2} />
-				{/**
-				  * @todo Ensure that changing tabs does not result
-				  * in additional untracked events being added..
-				*/}
-				{this.initImgAreaSelect()}
 			</div>
 		)
 	}
