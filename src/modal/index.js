@@ -92,29 +92,30 @@ class ThumbnailEditorModal extends React.PureComponent {
 				x1: 0, y1: 0, x2: 0, y2: 0
 			},
 		},
-		setThumbnail: (tabName) => {
+		setThumbnail: (tab) => {
 			const {
 				image: {
 					media_details: {
-						sizes,
+						sizes: {
+							source_url,
+						},
 					},
 				},
 				ratioMap,
 				thumbnailEdits,
 			} = this.props;
 
-			const name = tabName.replace('-by-', ':');
-			const cropSizeName = ratioMap[ name ];
-			const coordinates = thumbnailEdits?.[ cropSizeName ];
+			const dimensions = ratioMap[ tab ].dimensions;
+			const coordinates = thumbnailEdits?.[ ratioMap[ tab ].name ];
 			const thumbnail = {
-				width: sizes[ cropSizeName ].width,
-				height: sizes[ cropSizeName ].height,
-				url: sizes[ cropSizeName ].source_url,
+				width: dimensions.width,
+				height: dimensions.height,
+				url: source_url,
 				selection: this.getSelectionCoordinates(
 					coordinates,
 					{
-						width: sizes[ cropSizeName ].width,
-						height: sizes[ cropSizeName ].height,
+						width: dimensions.width,
+						height: dimensions.height,
 					}
 				)
 			};
@@ -136,9 +137,9 @@ class ThumbnailEditorModal extends React.PureComponent {
 		this.tabList = [];
 		for (const [key, val] of Object.entries(ratioMap)) {
 			this.tabList.push({
-				name: key.replace(':', '-by-'),
-				title: key,
-				className: 'tab-' + key.replace(':', '-by-'),
+				name: key,
+				title: key.replace('-by-', ':'),
+				className: 'tab_' + key,
 			});
 		}
 
@@ -163,32 +164,47 @@ class ThumbnailEditorModal extends React.PureComponent {
 		const {
 			state: {
 				thumbnail: {
-					width,
-					height,
-					selection: { x1, y1, x2 },
+					width: thumbWidth,
+					height: thumbHeight,
+					selection,
+					selection: {
+						y1: top,
+						x1: left,
+						x2: width,
+						y2: height,
+					},
 				},
 			},
 			cropperRef: { current },
 		} = this;
 
-		let cropArea = null;
+		const scaleX = thumbWidth / ( width || 1 );
+		const scaleY = thumbHeight / ( height || 1 );
+		const cropArea = {
+			top: top,
+			left: left,
+			width: width,
+			height: height,
+		};
 		const aspectRatio = width / height;
-		if (1 === aspectRatio) {
-			cropArea = {
-				left: x1,
-				width: x2,
-			};
-		} else if ( (4 / 3) === aspectRatio) {
-			cropArea = {
-				top: y1,
-				width: x2,
-			};
-		} else if ( (16 / 9) === aspectRatio) {
-			cropArea = {
-				left: x1,
-				top: y1,
-			};
-		}
+		// if (1 === aspectRatio) {
+		// 	console.log('square');
+		// } else if ( (4 / 3) === aspectRatio) {
+		// 	console.log('full_frame');
+		// 	cropArea = {
+		// 		// top: top,
+		// 		left: left,
+		// 		width: Math.round( scaleX * imgWidth ),
+		// 		height: Math.round( scaleY * imgHeight ),
+		// 	};
+		// } else if ( (16 / 9) === aspectRatio) {
+		// 	console.log('wide_screen');
+		// 	cropArea = {
+		// 		left: left,
+		// 		width: Math.round( scaleX * width ),
+		// 		height: Math.round( scaleY * height ),
+		// 	};
+		// }
 
 		const cropper = current?.cropper;
 		cropArea && cropper?.setCropBoxData(cropArea);
@@ -266,10 +282,10 @@ class ThumbnailEditorModal extends React.PureComponent {
 			);
 
 			selection = setSelection([
-				round( ( downsizedImg.width / 2 ) - ( selected_width / 2 ) ), // Mid-point + half of height of selection.
-				0,                                                            // Top edge (due to aspect ratio comparison).
-				round( ( downsizedImg.width / 2 ) + ( selected_width / 2 ) ), // Mid-point - half of height of selection.
-				downsizedImg.height,                                          // Bottom edge (due to aspect ratio comparison).
+				Math.round( ( downsizedImg.width / 2 ) - ( selected_width / 2 ) ), // Mid-point + half of height of selection.
+				0,                                                                 // Top edge (due to aspect ratio comparison).
+				Math.round( ( downsizedImg.width / 2 ) + ( selected_width / 2 ) ), // Mid-point - half of height of selection.
+				downsizedImg.height,                                               // Bottom edge (due to aspect ratio comparison).
 			]);
 		}
 
@@ -298,6 +314,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 			cropperRef,
 		} = this;
 		const full = getDownsized( sizes );
+		const cropBoxAspectRatio = width / height;
 
 		return (
 			<Cropper
@@ -305,8 +322,8 @@ class ThumbnailEditorModal extends React.PureComponent {
 				src={link}
 				style={{ width: full.width, height: full.height }}
 				// Cropper.js options
-				initialAspectRatio={full.width / full.height}
-				aspectRatio={width / height}
+				initialAspectRatio={cropBoxAspectRatio}
+				aspectRatio={cropBoxAspectRatio}
 				// guides={false}
 				crop={onCrop}
 				ready={onReady}
@@ -335,7 +352,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 		if ( ! thumbnail ) {
 			setThumbnail( tab.name );
 		}
-		console.log({tab: this});
+
 		return (
 			<div className={tab.className}>
 				<h2>

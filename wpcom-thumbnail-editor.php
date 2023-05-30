@@ -304,12 +304,39 @@ class WPcom_Thumbnail_Editor {
 		$html .= '</div>';
 		$html .= '</div>';
 
-		$html .= '<div id="thumbnail" ';
-		$html .= 'data-id="' . $attachment->ID;
-		$html .= '" data-sizes="' . htmlspecialchars( wp_json_encode( $sizes ), ENT_QUOTES, 'UTF-8' );
-		$html .= '">Loading...</div>';
+		$html .= $this->generate_modal_container( $attachment );
 
 		return $html;
+	}
+
+	/**
+	 * Helper method to generate div container for modal edit crop view.
+	 *
+	 * @param \WP_Post $attachment The attachment currently being edited.
+	 *
+	 * @return string The html for the div container.
+	 */
+	public function generate_modal_container( $attachment ) {
+		$sizes = $this->use_ratio_map ? $this->get_image_sizes_by_ratio() : $this->get_intermediate_image_sizes();
+
+		$sizes = apply_filters( 'wpcom_thumbnail_editor_image_size_names_choose', $sizes );
+
+		if ( empty( $sizes ) ) {
+			return '';
+		}
+
+		$size_map = array();
+		foreach ( $sizes as $key => $value ) {
+			$ratio                             = explode( ':', $key );
+			$css_id                            = $ratio[0] . '-by-' . $ratio[1];
+			$size_map[ $css_id ]['name']       = $value;
+			$size_map[ $css_id ]['dimensions'] = $this->get_thumbnail_dimensions( $key );
+		}
+
+		return '<div id="thumbnail" '
+			. 'data-id="' . $attachment->ID
+			. '" data-sizes="' . htmlspecialchars( wp_json_encode( $size_map ), ENT_QUOTES, 'UTF-8' )
+			. '">Loading...</div>';
 	}
 
 	/**
@@ -488,8 +515,6 @@ class WPcom_Thumbnail_Editor {
 					var scaleX = thumb_width / ( selection.width || 1 );
 					var scaleY = thumb_height / ( selection.height || 1 );
 
-					console.log("Running preview update...");
-
 					// Update the preview image.
 					$('#wpcom-thumbnail-edit-preview').css({
 						width: Math.round( scaleX * img_width ) + 'px',
@@ -528,11 +553,6 @@ class WPcom_Thumbnail_Editor {
 						$('#wpcom-thumbnail-edit').trigger('wpcom_thumbnail_edit_selectend');
 					}
 				};
-
-				console.log({
-					text: 'Running area select..',
-					imgAreaSelectArgs,
-				});
 
 				$('#wpcom-thumbnail-edit').imgAreaSelect(imgAreaSelectArgs);
 			});
