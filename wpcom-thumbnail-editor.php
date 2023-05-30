@@ -330,7 +330,8 @@ class WPcom_Thumbnail_Editor {
 			$ratio                             = explode( ':', $key );
 			$css_id                            = $ratio[0] . '-by-' . $ratio[1];
 			$size_map[ $css_id ]['name']       = $value;
-			$size_map[ $css_id ]['dimensions'] = $this->get_thumbnail_dimensions( $key );
+			$size_map[ $css_id ]['ratio']      = $ratio;
+			$size_map[ $css_id ]['dimensions'] = $this->get_thumbnail_dimensions( $value );
 		}
 
 		return '<div id="thumbnail" '

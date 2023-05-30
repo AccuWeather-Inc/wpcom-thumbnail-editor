@@ -1,30 +1,11 @@
 // Import Gutenberg variables
+@import "node_modules/@wordpress/components/build-style/style";
 @import "node_modules/@wordpress/base-styles/breakpoints";
-
-// Add other breakpoints or adjustments we want below
-
-// Import Gutenberg variables
-@import "node_modules/@wordpress/base-styles/colors";
-
-// Add other colors or adjustments we want below
-
-// Import Gutenberg variables
 @import "node_modules/@wordpress/base-styles/mixins";
+@import "node_modules/@wordpress/base-styles/colors";
+@import "node_modules/cropperjs/dist/cropper";
 
-// Add other mixins or adjustments we want below
-
-// Import Gutenberg variables
-@import "node_modules/@wordpress/base-styles/variables";
-
-// Gutenberg Missing Styles
-// $gray-500 is not declared in Gutenberg.
-$gray-500: #bbb;
-
-// Add other variables or adjustments we want below
-
-// Default Styles Here
-@import "node_modules/@wordpress/base-styles/z-index";
-@import "node_modules/@wordpress/base-styles/default-custom-properties";
+$accu-orange: #f05514;
 
 // Hack to fix the Tooltip position of the top-right side close button in a Modal component.
 .wpcom-thumbnail-editor__overlay {
@@ -43,10 +24,21 @@ $gray-500: #bbb;
 				right: 0;
 			}
 		}
+	}
 
+	.wpcom-thumbnail-editor__tab-panel {
+		background-color: $gray-100;
+	}
+
+	button.components-button:hover {
+		color: $accu-orange;
+	}
+
+	.components-tab-panel__tabs-item::after {
+		background: var(--wp-components-color-accent, $accu-orange);
+	}
+
+	.components-tab-panel__tabs-item:focus-visible::before {
+		box-shadow: 0 0 0 var(--wp-admin-border-width-focus) var(--wp-components-color-accent, $accu-orange);
 	}
 }
-
-// #wpcom-thumbnail-edit {
-// 	width: 100%;
-// }

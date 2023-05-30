@@ -8,7 +8,6 @@ import {
 } from '@wordpress/components';
 import { store as coreStore } from '@wordpress/core-data';
 import Cropper from "react-cropper";
-import "cropperjs/dist/cropper.css";
 import PropTypes from 'prop-types';
 
 const {
@@ -96,9 +95,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 			const {
 				image: {
 					media_details: {
-						sizes: {
-							source_url,
-						},
+						source_url,
 					},
 				},
 				ratioMap,
@@ -164,9 +161,6 @@ class ThumbnailEditorModal extends React.PureComponent {
 		const {
 			state: {
 				thumbnail: {
-					width: thumbWidth,
-					height: thumbHeight,
-					selection,
 					selection: {
 						y1: top,
 						x1: left,
@@ -178,36 +172,12 @@ class ThumbnailEditorModal extends React.PureComponent {
 			cropperRef: { current },
 		} = this;
 
-		const scaleX = thumbWidth / ( width || 1 );
-		const scaleY = thumbHeight / ( height || 1 );
-		const cropArea = {
+		current?.cropper?.setCropBoxData({
 			top: top,
 			left: left,
-			width: width,
-			height: height,
-		};
-		const aspectRatio = width / height;
-		// if (1 === aspectRatio) {
-		// 	console.log('square');
-		// } else if ( (4 / 3) === aspectRatio) {
-		// 	console.log('full_frame');
-		// 	cropArea = {
-		// 		// top: top,
-		// 		left: left,
-		// 		width: Math.round( scaleX * imgWidth ),
-		// 		height: Math.round( scaleY * imgHeight ),
-		// 	};
-		// } else if ( (16 / 9) === aspectRatio) {
-		// 	console.log('wide_screen');
-		// 	cropArea = {
-		// 		left: left,
-		// 		width: Math.round( scaleX * width ),
-		// 		height: Math.round( scaleY * height ),
-		// 	};
-		// }
-
-		const cropper = current?.cropper;
-		cropArea && cropper?.setCropBoxData(cropArea);
+			width: width - left,
+			height: height - top,
+		});
 	}
 
 	onCrop() {
@@ -292,7 +262,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 		return selection;
 	}
 
-	imgCropper() {
+	imgCropper(tab) {
 		const {
 			constructor: { getDownsized },
 			props: {
@@ -302,19 +272,16 @@ class ThumbnailEditorModal extends React.PureComponent {
 						sizes,
 					},
 				},
-			},
-			state: {
-				thumbnail: {
-					width,
-					height,
-				},
+				ratioMap,
 			},
 			onCrop,
 			onReady,
 			cropperRef,
 		} = this;
 		const full = getDownsized( sizes );
-		const cropBoxAspectRatio = width / height;
+		const aspectRatio = (
+			ratioMap[ tab.name ].ratio[0] / ratioMap[ tab.name ].ratio[1]
+		);
 
 		return (
 			<Cropper
@@ -322,8 +289,8 @@ class ThumbnailEditorModal extends React.PureComponent {
 				src={link}
 				style={{ width: full.width, height: full.height }}
 				// Cropper.js options
-				initialAspectRatio={cropBoxAspectRatio}
-				aspectRatio={cropBoxAspectRatio}
+				initialAspectRatio={aspectRatio}
+				aspectRatio={aspectRatio}
 				// guides={false}
 				crop={onCrop}
 				ready={onReady}
@@ -331,7 +298,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 				scalable={false}
 				rotatable={false}
 				ref={cropperRef}
-				preview="#wpcom-thumbnail-edit-modal-preview"
+				preview='.img-preview'
 			/>
 		);
 	}
@@ -364,7 +331,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 						'wpcom-thumbnail-editor'
 					)}
 				</p>
-				{this.imgCropper()}
+				{this.imgCropper(tab)}
 				<Button
 					variant="primary"
 					onClick={() => null}
@@ -380,10 +347,9 @@ class ThumbnailEditorModal extends React.PureComponent {
 				<h3>
 					{__('Fullsize Thumbnail Preview', 'wpcom-thumbnail-editor')}
 				</h3>
-				<div style={{overflow:'hidden', width: thumbnail.width + 'px', height: thumbnail.height + 'px'}}>
+				<div className="img-preview" style={{overflow:'hidden', width: thumbnail.width + 'px', height: thumbnail.height + 'px', paddingRight: '2em'}}>
 					<img
 						id="wpcom-thumbnail-edit-modal-preview"
-						className="hidden"
 						src={link}
 					/>
 				</div>
@@ -410,7 +376,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 				overlayClassName='wpcom-thumbnail-editor__overlay'
 			>
 				<TabPanel
-					className="my-tab-panel"
+					className="wpcom-thumbnail-editor__tab-panel"
 					tabs={ tabList }
 					onSelect={ ( tabName ) => setThumbnail( tabName ) }
 				>
