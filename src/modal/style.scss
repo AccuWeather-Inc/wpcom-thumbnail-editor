@@ -39,9 +39,20 @@ $accu-orange: #f05514;
 		margin: 0;
 	}
 
-	.components-modal__footer .components-button {
+	.components-modal__footer .components-modal__save-button {
 		position: relative;
 		left: 8px;
+	}
+
+	.components-modal__footer-flooring-container {
+
+		.components-button.components-guide__back-button,
+		.components-button.components-guide__forward-button,
+		.components-button.components-guide__finish-button {
+			position: unset;
+			left: unset;
+			right: unset;
+		}
 	}
 
 	.components-modal__content .components-modal__footer {
@@ -70,6 +81,10 @@ $accu-orange: #f05514;
 		padding: 8px;
 	}
 
+	.components-guide__page {
+		margin-top: 60px;
+	}
+
 	.components-modal {
 		&__content {
 			margin-bottom: 72px;
@@ -88,7 +103,7 @@ $accu-orange: #f05514;
 	}
 
 	.wpcom-thumbnail-editor__tab-panel {
-		background-color: $gray-100;
+		// background-color: $gray-100;
 	}
 
 	button.components-button:hover {

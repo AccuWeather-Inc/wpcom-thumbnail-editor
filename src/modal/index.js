@@ -5,7 +5,10 @@ import {
 	Button,
 	Spinner,
 	TabPanel,
+	PageControl,
 } from '@wordpress/components';
+import { focus } from '@wordpress/dom';
+import { LEFT, RIGHT } from '@wordpress/keycodes';
 import { store as coreStore } from '@wordpress/core-data';
 import Cropper from "react-cropper";
 import PropTypes from 'prop-types';
@@ -14,13 +17,22 @@ const {
 	i18n: {
 		__,
 	},
+	element: { useEffect },
 	data: { withSelect },
 } = wp;
+
+const Observer = ({ value, didUpdate }) => {
+	useEffect(() => {
+		didUpdate(value)
+	}, [value])
+	return null; // component does not render anything
+};
 
 class ThumbnailEditorModal extends React.PureComponent {
 	// Define Prop for this component.
 	static defaultProps = {
 		image: null,
+		images: [],
 		ratioMap: [],
 		thumbnailEdits: [],
 	};
@@ -29,6 +41,9 @@ class ThumbnailEditorModal extends React.PureComponent {
 	static propTypes = {
 		id: PropTypes.number.isRequired,
 		image: PropTypes.instanceOf(Object),
+		images: PropTypes.arrayOf(
+			PropTypes.instanceOf(Object),
+		),
 		tabs: PropTypes.objectOf(
 			PropTypes.shape({
 				tabList: PropTypes.arrayOf(
@@ -121,6 +136,28 @@ class ThumbnailEditorModal extends React.PureComponent {
 				thumbnail,
 			});
 		},
+		currentPage: 0,
+		setCurrentPage: (currentPage) => {
+			this.setState({
+				currentPage,
+			});
+		},
+		canGoBack: () => {
+			const { currentPage } = this.state;
+			return currentPage > 0;
+		},
+		canGoForward: () => {
+			const { props: { images }, state: { currentPage } } = this;
+			return currentPage < images.length - 1;
+		},
+		onKeyDown: ( event ) => {
+			const { goBack, goForward } = this.state;
+			if ( event.keyCode === LEFT ) {
+				goBack();
+			} else if ( event.keyCode === RIGHT ) {
+				goForward();
+			}
+		},
 	};
 
 	/**
@@ -140,12 +177,42 @@ class ThumbnailEditorModal extends React.PureComponent {
 			});
 		}
 
+		this.modalRef = React.createRef();
 		this.cropperRef = React.createRef();
 		this.onCrop = this.onCrop.bind(this);
 		this.onReady = this.onReady.bind(this);
 	}
 
 	componentDidMount() {}
+
+	goBack() {
+		const {
+			canGoBack,
+			currentPage,
+			setCurrentPage,
+		} = this.state;
+		if ( canGoBack() ) {
+			setCurrentPage( currentPage - 1 );
+		}
+	}
+
+	goForward() {
+		const {
+			currentPage,
+			canGoForward,
+			setCurrentPage,
+		} = this.state;
+		if ( canGoForward ) {
+			setCurrentPage( currentPage + 1 );
+		}
+	}
+
+	setPageFocus() {
+		const current = this?.modalRef?.current;
+		// Each time we change the current page, start from the first element of the page.
+		// This also solves any focus loss that can happen.
+		current && focus.tabbable.find( current )?.[ 0 ]?.focus();
+	}
 
 	/**
 	 * Get downsized dimentions for image, typically the 'full' crop.
@@ -291,7 +358,6 @@ class ThumbnailEditorModal extends React.PureComponent {
 				// Cropper.js options
 				initialAspectRatio={aspectRatio}
 				aspectRatio={aspectRatio}
-				// guides={false}
 				crop={onCrop}
 				ready={onReady}
 				zoomable={false}
@@ -348,15 +414,24 @@ class ThumbnailEditorModal extends React.PureComponent {
 	renderModal() {
 		const {
 			state: {
+				goBack,
 				setOpen,
+				onKeyDown,
+				canGoBack,
+				goForward,
+				currentPage,
 				setThumbnail,
+				canGoForward,
+				setCurrentPage,
 			},
 			tabList,
+			modalRef,
+			setPageFocus,
 		} = this;
 
-		const title = '';
-		const headingId = '';
-		const icon = null;
+		if (! this.props?.image) {
+			return null;
+		}
 
 		return (
 			<Modal
@@ -365,37 +440,53 @@ class ThumbnailEditorModal extends React.PureComponent {
 				isFullScreen
 				shouldCloseOnClickOutside={false}
 				shouldCloseOnEsc={false}
+				onKeyDown={onKeyDown}
 				overlayClassName='wpcom-thumbnail-editor__overlay'
+				ref={ modalRef }
 			>
-				<TabPanel
-					className="wpcom-thumbnail-editor__tab-panel"
-					tabs={ tabList }
-					onSelect={ ( tabName ) => setThumbnail( tabName ) }
-				>
-					{ ( tab ) => this.renderTabView( tab )}
-				</TabPanel>
+				<div className="components-guide__container">
+					<div className="components-guide__page">
+						{ this.props.images.length > 1 && (
+							<PageControl
+								currentPage={ currentPage }
+								numberOfPages={ this.props.images.length }
+								setCurrentPage={ setCurrentPage }
+							/>
+						) }
+
+						<Observer value={currentPage} didUpdate={setPageFocus} />
+						<TabPanel
+							className="wpcom-thumbnail-editor__tab-panel"
+							tabs={ tabList }
+							onSelect={ ( tabName ) => setThumbnail( tabName ) }
+						>
+							{ ( tab ) => this.renderTabView( tab )}
+						</TabPanel>
+					</div>
+				</div>
 				<div className="components-modal__footer">
 					<div className="components-modal__footer-flooring-container">
-						{ icon && (
-							<span
-								className="components-modal__icon-container"
-								aria-hidden
+						{ canGoBack() && (
+							<Button
+								className="components-guide__back-button"
+								onClick={ goBack }
 							>
-								{ icon }
-							</span>
+								{ __( 'Previous' ) }
+							</Button>
 						) }
-						{ title && (
-							<h1
-								id={ headingId }
-								className="components-modal__footer-flooring"
+						{ canGoForward() && (
+							<Button
+								className="components-guide__forward-button"
+								onClick={ goForward }
 							>
-								{ title }
-							</h1>
+								{ __( 'Next' ) }
+							</Button>
 						) }
 					</div>
 					<Button
 						variant="primary"
-						onClick={() => null}
+						onClick={() => setOpen(false)}
+						className="components-modal__save-button"
 						label="Save"
 					>
 						{__('Save', 'wpcom-thumbnail-editor')}
