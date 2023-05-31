@@ -14,6 +14,7 @@ import Cropper from "react-cropper";
 import PropTypes from 'prop-types';
 
 const {
+	apiFetch,
 	i18n: {
 		__,
 	},
@@ -34,7 +35,6 @@ class ThumbnailEditorModal extends React.PureComponent {
 		image: null,
 		images: [],
 		ratioMap: [],
-		thumbnailEdits: [],
 	};
 
 	// Define PropTypes for this component.
@@ -71,16 +71,6 @@ class ThumbnailEditorModal extends React.PureComponent {
 				}),
 			),
 		),
-		thumbnailEdits: PropTypes.arrayOf(
-			PropTypes.objectOf(
-				PropTypes.shape({
-					ratio: PropTypes.string,
-					dimens: PropTypes.arrayOf(
-						PropTypes.string,
-					),
-				}),
-			),
-		),
 	};
 
 	/**
@@ -90,6 +80,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 	state = {
 		open: false,
 		loading: false,
+		isCropChanged: false,
 		setOpen: (isOpen) => {
 			this.setState({
 				open: isOpen,
@@ -108,14 +99,16 @@ class ThumbnailEditorModal extends React.PureComponent {
 		},
 		setThumbnail: (tab) => {
 			const {
-				image: {
-					media_details: {
-						source_url,
+				props: {
+					image: {
+						media_details: {
+							source_url,
+						},
+						wpcom_thumbnail_edit: thumbnailEdits,
 					},
+					ratioMap,
 				},
-				ratioMap,
-				thumbnailEdits,
-			} = this.props;
+			} = this;
 
 			const dimensions = ratioMap[ tab ].dimensions;
 			const coordinates = thumbnailEdits?.[ ratioMap[ tab ].name ];
@@ -181,6 +174,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 		this.cropperRef = React.createRef();
 		this.onCrop = this.onCrop.bind(this);
 		this.onReady = this.onReady.bind(this);
+		this.onTabSelect = this.onTabSelect.bind(this);
 	}
 
 	componentDidMount() {}
@@ -224,6 +218,58 @@ class ThumbnailEditorModal extends React.PureComponent {
 		};
 	}
 
+	updateImage() {
+		const data = {};
+		const {
+			versionString,
+			nonce
+		} = window?.wpApiSettings;
+
+		if (nonce && data) {
+			apiFetch({
+				path: `${versionString}/media`,
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'X-WP-Nonce': nonce
+				},
+				data,
+			});
+		}
+	}
+
+	onTabSelect( tabKey ) {
+		const {
+			state: {
+				thumbnail,
+				setThumbnail,
+				isCropChanged,
+			},
+			cropperRef: { current },
+		} = this;
+
+		const getSelection = ({ top, left, width, height }) => {
+			return {
+				y1: top,
+				x1: left,
+				x2: width + left,
+				y2: height + top,
+			};
+		};
+
+		if (isCropChanged) {
+			console.log({oldThumbnail: thumbnail});
+			const cropBoxData = current?.cropper?.getCropBoxData();
+			if (cropBoxData) {
+				thumbnail.selection = getSelection(cropBoxData);
+				console.log({thumbnail});
+			}
+		}
+
+		// Set the Tab ratio edit details.
+		setThumbnail( tabKey );
+	}
+
 	onReady() {
 		const {
 			state: {
@@ -248,8 +294,10 @@ class ThumbnailEditorModal extends React.PureComponent {
 	}
 
 	onCrop() {
-		const cropper = this.cropperRef.current?.cropper;
-		console.log(cropper?.getCropBoxData());
+		const { isCropChanged } = this.state;
+		! isCropChanged && this.setState({
+			isCropChanged: true,
+		});
 	}
 
 	getSelectionCoordinates( coordinates, thumbnail ) {
@@ -329,9 +377,8 @@ class ThumbnailEditorModal extends React.PureComponent {
 		return selection;
 	}
 
-	imgCropper(tab) {
+	renderTabView(tab) {
 		const {
-			constructor: { getDownsized },
 			props: {
 				image: {
 					link,
@@ -341,50 +388,25 @@ class ThumbnailEditorModal extends React.PureComponent {
 				},
 				ratioMap,
 			},
-			onCrop,
-			onReady,
-			cropperRef,
-		} = this;
-		const full = getDownsized( sizes );
-		const aspectRatio = (
-			ratioMap[ tab.name ].ratio[0] / ratioMap[ tab.name ].ratio[1]
-		);
-
-		return (
-			<Cropper
-				className='wpcom-edit-thumbnail-editor'
-				src={link}
-				style={{ width: full.width, height: full.height }}
-				// Cropper.js options
-				initialAspectRatio={aspectRatio}
-				aspectRatio={aspectRatio}
-				crop={onCrop}
-				ready={onReady}
-				zoomable={false}
-				scalable={false}
-				rotatable={false}
-				ref={cropperRef}
-				preview='.img-preview'
-			/>
-		);
-	}
-
-	renderTabView(tab) {
-		const {
-			props: {
-				image: {
-					link,
-				},
-			},
 			state: {
 				thumbnail,
 				setThumbnail,
 			},
+			onCrop,
+			onReady,
+			cropperRef,
+			constructor: { getDownsized },
 		} = this;
 
 		if ( ! thumbnail ) {
 			setThumbnail( tab.name );
 		}
+
+		console.log({item: this});
+		const full = getDownsized( sizes );
+		const aspectRatio = (
+			ratioMap[ tab.name ].ratio[0] / ratioMap[ tab.name ].ratio[1]
+		);
 
 		return (
 			<div className={tab.className}>
@@ -397,7 +419,21 @@ class ThumbnailEditorModal extends React.PureComponent {
 						'wpcom-thumbnail-editor'
 					)}
 				</p>
-				{this.imgCropper(tab)}
+				<Cropper
+					className='wpcom-edit-thumbnail-editor'
+					src={link}
+					style={{ width: full.width, height: full.height }}
+					// Cropper.js options
+					initialAspectRatio={aspectRatio}
+					aspectRatio={aspectRatio}
+					crop={onCrop}
+					ready={onReady}
+					zoomable={false}
+					scalable={false}
+					rotatable={false}
+					ref={cropperRef}
+					preview='.img-preview'
+				/>
 				<h3>
 					{__('Fullsize Thumbnail Preview', 'wpcom-thumbnail-editor')}
 				</h3>
@@ -420,12 +456,12 @@ class ThumbnailEditorModal extends React.PureComponent {
 				canGoBack,
 				goForward,
 				currentPage,
-				setThumbnail,
 				canGoForward,
 				setCurrentPage,
 			},
 			tabList,
 			modalRef,
+			onTabSelect,
 			setPageFocus,
 		} = this;
 
@@ -458,7 +494,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 						<TabPanel
 							className="wpcom-thumbnail-editor__tab-panel"
 							tabs={ tabList }
-							onSelect={ ( tabName ) => setThumbnail( tabName ) }
+							onSelect={ ( tabKey ) => onTabSelect( tabKey ) }
 						>
 							{ ( tab ) => this.renderTabView( tab )}
 						</TabPanel>
@@ -536,8 +572,5 @@ export default withSelect( (select, props) => {
 	const image = select( coreStore )
 		.getMedia( props?.id ) ?? null;
 
-	return {
-		image,
-		thumbnailEdits: image?.wpcom_thumbnail_edit,
-	};
+	return { image };
 })(ThumbnailEditorModal);
