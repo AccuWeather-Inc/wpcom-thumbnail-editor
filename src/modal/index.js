@@ -332,18 +332,6 @@ class ThumbnailEditorModal extends React.PureComponent {
 					)}
 				</p>
 				{this.imgCropper(tab)}
-				<Button
-					variant="primary"
-					onClick={() => null}
-				>
-					{__('Reset Thumbnail', 'wpcom-thumbnail-editor')}
-				</Button>
-				<Button
-					variant="primary"
-					onClick={() => null}
-				>
-					{__('Save Changes', 'wpcom-thumbnail-editor')}
-				</Button>
 				<h3>
 					{__('Fullsize Thumbnail Preview', 'wpcom-thumbnail-editor')}
 				</h3>
@@ -366,6 +354,10 @@ class ThumbnailEditorModal extends React.PureComponent {
 			tabList,
 		} = this;
 
+		const title = '';
+		const headingId = '';
+		const icon = null;
+
 		return (
 			<Modal
 				title={__('Edit Image Crops', 'wpcom-thumbnail-editor')}
@@ -382,6 +374,33 @@ class ThumbnailEditorModal extends React.PureComponent {
 				>
 					{ ( tab ) => this.renderTabView( tab )}
 				</TabPanel>
+				<div className="components-modal__footer">
+					<div className="components-modal__footer-flooring-container">
+						{ icon && (
+							<span
+								className="components-modal__icon-container"
+								aria-hidden
+							>
+								{ icon }
+							</span>
+						) }
+						{ title && (
+							<h1
+								id={ headingId }
+								className="components-modal__footer-flooring"
+							>
+								{ title }
+							</h1>
+						) }
+					</div>
+					<Button
+						variant="primary"
+						onClick={() => null}
+						label="Save"
+					>
+						{__('Save', 'wpcom-thumbnail-editor')}
+					</Button>
+				</div>
 			</Modal>
 		);
 	}

@@ -13,7 +13,68 @@ $accu-orange: #f05514;
 	justify-content: center;
 	align-items: center;
 
+	.components-modal__footer {
+		box-sizing: border-box;
+		border-top: 1px solid transparent;
+		padding: 24px 32px 12px;
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		height: 72px;
+		width: 100%;
+		z-index: 10;
+		position: absolute;
+		bottom: 0;
+		left: 0;
+	}
+
+	.components-modal__footer .components-modal__footer-flooring {
+		font-size: 1.2rem;
+		font-weight: 600;
+	}
+
+	.components-modal__footer h1 {
+		line-height: 1;
+		margin: 0;
+	}
+
+	.components-modal__footer .components-button {
+		position: relative;
+		left: 8px;
+	}
+
+	.components-modal__content .components-modal__footer {
+		border-top-color: #ddd;
+	}
+
+	.components-modal__footer + p {
+		margin-top: 0;
+	}
+
+	.components-modal__footer-heading-container {
+		align-items: center;
+		flex-grow: 1;
+		display: flex;
+		flex-direction: row;
+		justify-content: left;
+	}
+
+	.components-modal__footer-icon-container {
+		display: inline-block;
+	}
+
+	.components-modal__footer-icon-container svg {
+		max-width: 36px;
+		max-height: 36px;
+		padding: 8px;
+	}
+
 	.components-modal {
+		&__content {
+			margin-bottom: 72px;
+		}
+
 		&__frame {
 			@include break-small {
 				transform: initial;
