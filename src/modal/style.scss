@@ -102,8 +102,9 @@ $accu-orange: #f05514;
 		}
 	}
 
-	.wpcom-thumbnail-editor__tab-panel {
-		// background-color: $gray-100;
+	.wpcom-thumbnail-editor__crops-tab-panel {
+		display: flex;
+		flex-direction: row;
 	}
 
 	button.components-button:hover {
