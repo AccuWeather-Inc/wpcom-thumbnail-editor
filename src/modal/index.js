@@ -27,7 +27,38 @@ const Observer = ({ value, didUpdate }) => {
 		didUpdate(value)
 	}, [value])
 	return null; // component does not render anything
-};
+}
+
+export function ImageEditor({
+	image,
+	onChange,
+}) {
+
+	const onSelect = ( tabName ) => {
+		console.log( 'Selecting tab', tabName );
+	};
+
+	return (
+		<TabPanel
+			className="wpcom-thumbnail-editor__image-edit-tab-panel"
+			activeClass="active-tab"
+			onSelect={ onSelect }
+			tabs={ [
+				{
+					name: 'fields',
+					title: 'Fields',
+					className: 'tab-fields',
+				},
+				{
+					name: 'crops',
+					title: 'Crops',
+					className: 'tab-crops',
+				},
+			] }
+			children={children}
+		/>
+	);
+}
 
 class ThumbnailEditorModal extends React.PureComponent {
 	// Define Prop for this component.
@@ -175,6 +206,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 		this.onCrop = this.onCrop.bind(this);
 		this.onReady = this.onReady.bind(this);
 		this.onTabSelect = this.onTabSelect.bind(this);
+		this.renderTabView = this.renderTabView.bind(this);
 	}
 
 	componentDidMount() {}
@@ -471,7 +503,7 @@ class ThumbnailEditorModal extends React.PureComponent {
 
 		return (
 			<Modal
-				title={__('Edit Image Crops', 'wpcom-thumbnail-editor')}
+				title={__('Edit Image', 'wpcom-thumbnail-editor')}
 				onRequestClose={() => setOpen(false)}
 				isFullScreen
 				shouldCloseOnClickOutside={false}
@@ -495,9 +527,8 @@ class ThumbnailEditorModal extends React.PureComponent {
 							className="wpcom-thumbnail-editor__tab-panel"
 							tabs={ tabList }
 							onSelect={ ( tabKey ) => onTabSelect( tabKey ) }
-						>
-							{ ( tab ) => this.renderTabView( tab )}
-						</TabPanel>
+							children={this.renderTabView}
+						/>
 					</div>
 				</div>
 				<div className="components-modal__footer">
