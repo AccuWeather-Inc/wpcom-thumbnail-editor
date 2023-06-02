@@ -254,7 +254,7 @@ export function ImageEditor( { image, ratioMap, onChange } ) {
 	const [ alt, setAlt ] = useState( '' );
 	const [ credit, setCredit ] = useState( '' );
 	const [ content, setContent ] = useState( '' );
-	const richTextProps = useBlockProps();
+	// const richTextProps = useBlockProps();
 	const altFieldProps = {
 		label: __( 'Label', 'Label Text' ),
 		help: __(
@@ -289,7 +289,7 @@ export function ImageEditor( { image, ratioMap, onChange } ) {
 						onChange={ setAlt }
 					/>
 					<RichText
-						{ ...richTextProps }
+						// { ...richTextProps }
 						label={ __( 'Caption', 'wpcom-thumbnail-editor' ) }
 						tagName="h2" // The tag here is the element output and editable in the admin
 						value={ content } // Any existing content, either from the database or an attribute default
