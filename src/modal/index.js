@@ -1,7 +1,16 @@
 /* eslint-disable camelcase, no-console */
 /* global React */
 
-import { Modal, Button, Spinner, TabPanel, Guide } from '@wordpress/components';
+import {
+	Modal,
+	Button,
+	Spinner,
+	TabPanel,
+	Guide,
+	TextControl,
+	TextareaControl,
+} from '@wordpress/components';
+import { useBlockProps, RichText } from '@wordpress/block-editor';
 import { focus } from '@wordpress/dom';
 import { LEFT, RIGHT } from '@wordpress/keycodes';
 import { store as coreStore } from '@wordpress/core-data';
@@ -22,7 +31,6 @@ const getDownsized = ( sizes ) => {
 };
 
 const getSelectionCoordinates = ( image, coordinates, thumbnail ) => {
-	console.log( { image, coordinates, thumbnail } );
 	const downsizedImg = getDownsized( image.media_details.sizes );
 	const setSelection = ( selected ) => {
 		return {
@@ -243,6 +251,20 @@ const ImageCropEditor = ( { image, ratioMap, onUpdate } ) => {
 };
 
 export function ImageEditor( { image, ratioMap, onChange } ) {
+	const [ alt, setAlt ] = useState( '' );
+	const [ credit, setCredit ] = useState( '' );
+	const [ content, setContent ] = useState( '' );
+	const richTextProps = useBlockProps();
+	const altFieldProps = {
+		label: __( 'Label', 'Label Text' ),
+		help: __(
+			'Help text to explain the textarea.',
+			'wpcom-thumbnail-editor'
+		),
+		rows: 4,
+		className: 'wpcom-thumbnail-editor__image-alt',
+	};
+
 	const onSelect = ( tabName ) => {
 		console.log( 'Selecting tab', tabName );
 		// onChange();
@@ -250,14 +272,40 @@ export function ImageEditor( { image, ratioMap, onChange } ) {
 
 	const children = ( tab ) => (
 		<>
-			{ 'crops' === tab.name ? (
+			{ 'fields' === tab.name ? (
+				<>
+					<TextControl
+						label="Credits"
+						help={ __(
+							'This is a required Field.',
+							'wpcom-thumbnail-editor'
+						) }
+						value={ credit }
+						onChange={ setCredit }
+					/>
+					<TextareaControl
+						{ ...altFieldProps }
+						value={ alt }
+						onChange={ setAlt }
+					/>
+					<RichText
+						{ ...richTextProps }
+						label={ __( 'Caption', 'wpcom-thumbnail-editor' ) }
+						tagName="h2" // The tag here is the element output and editable in the admin
+						value={ content } // Any existing content, either from the database or an attribute default
+						allowedFormats={ [ 'core/bold', 'core/italic' ] } // Allow the content to be made bold or italic, but do not allow other formatting options
+						onChange={
+							( _content ) => setContent( { content: _content } ) // Store updated content as a block attribute
+						}
+						placeholder={ __( 'Enter caption here…' ) } // Display this text before any content has been added by the user
+					/>
+				</>
+			) : (
 				<ImageCropEditor
 					image={ image }
 					ratioMap={ ratioMap }
 					onUpdate={ onSelect }
 				/>
-			) : (
-				<div>Nothing to see here yet.</div>
 			) }
 		</>
 	);

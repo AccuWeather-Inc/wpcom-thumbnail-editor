@@ -25,6 +25,7 @@
     "react-dom": "^18.2.0"
   },
   "dependencies": {
+    "@wordpress/block-editor": "^12.2.0",
     "react-cropper": "^2.3.3"
   }
 }
