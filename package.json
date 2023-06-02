@@ -14,18 +14,13 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@wordpress/components": "^24.0.0",
-    "@wordpress/core-data": "^6.10.0",
     "@wordpress/dependency-extraction-webpack-plugin": "^4.16.0",
-    "@wordpress/element": "^5.10.0",
     "@wordpress/eslint-plugin": "^14.7.0",
-    "@wordpress/i18n": "^4.33.0",
-    "@wordpress/scripts": "^26.2.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "@wordpress/scripts": "^26.2.0"
   },
   "dependencies": {
-    "@wordpress/block-editor": "^12.2.0",
+    "@wordpress/components": "^25.0.0",
+    "@wordpress/core-data": "^6.11.0",
     "react-cropper": "^2.3.3"
   }
 }

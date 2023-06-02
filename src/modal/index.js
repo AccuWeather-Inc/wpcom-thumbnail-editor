@@ -1,5 +1,5 @@
 /* eslint-disable camelcase, no-console */
-/* global React */
+/* global $, React */
 
 import {
 	Modal,
@@ -10,7 +10,6 @@ import {
 	TextControl,
 	TextareaControl,
 } from '@wordpress/components';
-import { useBlockProps, RichText } from '@wordpress/block-editor';
 import { focus } from '@wordpress/dom';
 import { LEFT, RIGHT } from '@wordpress/keycodes';
 import { store as coreStore } from '@wordpress/core-data';
@@ -21,6 +20,7 @@ const {
 	i18n: { __ },
 	element: { useRef, useState, useEffect, useMemo, useReducer },
 	data: { useSelect },
+	editor,
 } = wp;
 
 const getDownsized = ( sizes ) => {
@@ -163,13 +163,13 @@ const ImageCropEditor = ( { image, ratioMap, onUpdate } ) => {
 				return [ top, left, width + left, height + top ];
 			};
 			const cropBoxData = cropperRef?.current?.cropper?.getCropBoxData();
-			// if ( cropBoxData ) {
-			// 	const { wpcom_thumbnail_edit: thumbnailEdits } = image;
-			// 	thumbnailEdits[ ratioMap[ tab.name ].name ] =
-			// 		getSelection( cropBoxData );
+			if ( cropBoxData ) {
+				const { wpcom_thumbnail_edit: thumbnailEdits } = image;
+				thumbnailEdits[ ratioMap[ tab.name ].name ] =
+					getSelection( cropBoxData );
 
-			// 	onUpdate( updateImage );
-			// }
+				// onUpdate( updateImage );
+			}
 		};
 
 		const onReady = () => {
@@ -251,23 +251,24 @@ const ImageCropEditor = ( { image, ratioMap, onUpdate } ) => {
 };
 
 export function ImageEditor( { image, ratioMap, onChange } ) {
+	const captionRef = useRef();
 	const [ alt, setAlt ] = useState( '' );
 	const [ credit, setCredit ] = useState( '' );
 	const [ content, setContent ] = useState( '' );
-	// const richTextProps = useBlockProps();
-	const altFieldProps = {
-		label: __( 'Label', 'Label Text' ),
-		help: __(
-			'Help text to explain the textarea.',
-			'wpcom-thumbnail-editor'
-		),
-		rows: 4,
-		className: 'wpcom-thumbnail-editor__image-alt',
-	};
+
+	useEffect( () => {
+		if ( captionRef.current ) {
+			const rteField = $( captionRef.current );
+			editor.initialize( rteField );
+			return () => {
+				editor.remove( rteField );
+			};
+		}
+	}, [ content ] );
 
 	const onSelect = ( tabName ) => {
 		console.log( 'Selecting tab', tabName );
-		// onChange();
+		onChange();
 	};
 
 	const children = ( tab ) => (
@@ -284,20 +285,21 @@ export function ImageEditor( { image, ratioMap, onChange } ) {
 						onChange={ setCredit }
 					/>
 					<TextareaControl
-						{ ...altFieldProps }
+						label={ __( 'Alt Text', 'wpcom-thumbnail-editor' ) }
+						help={ __(
+							'Text to describe the image to screen readers.',
+							'wpcom-thumbnail-editor'
+						) }
+						className="wpcom-thumbnail-editor__image-alt"
 						value={ alt }
 						onChange={ setAlt }
 					/>
-					<RichText
-						// { ...richTextProps }
+					<TextareaControl
+						ref={ captionRef }
 						label={ __( 'Caption', 'wpcom-thumbnail-editor' ) }
-						tagName="h2" // The tag here is the element output and editable in the admin
-						value={ content } // Any existing content, either from the database or an attribute default
-						allowedFormats={ [ 'core/bold', 'core/italic' ] } // Allow the content to be made bold or italic, but do not allow other formatting options
-						onChange={
-							( _content ) => setContent( { content: _content } ) // Store updated content as a block attribute
-						}
-						placeholder={ __( 'Enter caption here…' ) } // Display this text before any content has been added by the user
+						className="wpcom-thumbnail-editor__image-caption"
+						value={ content }
+						onChange={ setContent }
 					/>
 				</>
 			) : (
