@@ -13,6 +13,7 @@ import {
 import { focus } from '@wordpress/dom';
 import { LEFT, RIGHT } from '@wordpress/keycodes';
 import { store as coreStore } from '@wordpress/core-data';
+import { Editor } from '@tinymce/tinymce-react';
 import Cropper from 'react-cropper';
 
 const {
@@ -20,7 +21,6 @@ const {
 	i18n: { __ },
 	element: { useRef, useState, useEffect, useMemo, useReducer },
 	data: { useSelect },
-	editor,
 } = wp;
 
 const getDownsized = ( sizes ) => {
@@ -250,25 +250,50 @@ const ImageCropEditor = ( { image, ratioMap, onUpdate } ) => {
 	);
 };
 
+const addRTE = ( id ) => {
+	let mce_options = {};
+	const { tinyMCEPreInit } = window;
+	if ( typeof tinymce !== 'undefined' ) {
+		if ( typeof tinyMCEPreInit.mceInit[ id ] === 'undefined' ) {
+			mce_options = $.extend(
+				true,
+				{},
+				tinyMCEPreInit.mceInit[ 'fm--0' ]
+			);
+			mce_options.body_class = mce_options.body_class.replace(
+				id,
+				'fm--0'
+			);
+			mce_options.selector = mce_options.selector.replace( id, 'fm--0' );
+			mce_options.wp_skip_init = false;
+			tinyMCEPreInit.mceInit[ id ] = mce_options;
+		}
+	}
+	return mce_options;
+};
+
 export function ImageEditor( { image, ratioMap, onChange } ) {
-	const captionRef = useRef();
+	const tinyRef = useRef();
 	const [ alt, setAlt ] = useState( '' );
 	const [ credit, setCredit ] = useState( '' );
-	const [ content, setContent ] = useState( '' );
 
-	useEffect( () => {
-		if ( captionRef.current ) {
-			const rteField = $( captionRef.current );
-			editor.initialize( rteField );
-			return () => {
-				editor.remove( rteField );
-			};
-		}
-	}, [ content ] );
+	const id = 'editor-' + image.id;
+
+	// Need to fix this so that it isn't dependent on fieldmanager field.
+	const opts = addRTE( id );
+
+	const tinyMCE =
+		'//3013-production.vipdev.lndo.site/wp-includes/js/tinymce/tinymce.min.js';
 
 	const onSelect = ( tabName ) => {
 		console.log( 'Selecting tab', tabName );
 		onChange();
+	};
+
+	const log = () => {
+		if ( tinyRef.current ) {
+			console.log( tinyRef.current.getContent() );
+		}
 	};
 
 	const children = ( tab ) => (
@@ -294,13 +319,16 @@ export function ImageEditor( { image, ratioMap, onChange } ) {
 						value={ alt }
 						onChange={ setAlt }
 					/>
-					<TextareaControl
-						ref={ captionRef }
-						label={ __( 'Caption', 'wpcom-thumbnail-editor' ) }
-						className="wpcom-thumbnail-editor__image-caption"
-						value={ content }
-						onChange={ setContent }
+					<Editor
+						id={ id }
+						tinymceScriptSrc={ tinyMCE }
+						onInit={ ( evt, _editor ) =>
+							( tinyRef.current = _editor )
+						}
+						initialValue="<p>This is the initial content of the editor.</p>"
+						init={ opts }
 					/>
+					<button onClick={ log }>Log editor content</button>
 				</>
 			) : (
 				<ImageCropEditor

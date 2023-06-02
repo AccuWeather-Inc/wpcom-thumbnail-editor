@@ -9,9 +9,9 @@ $accu-orange: #f05514;
 
 // Hack to fix the Tooltip position of the top-right side close button in a Modal component.
 .wpcom-thumbnail-editor__overlay {
-	display: flex;
-	justify-content: center;
-	align-items: center;
+	// display: flex;
+	// justify-content: center;
+	// align-items: center;
 
 	.components-modal__footer {
 		box-sizing: border-box;
@@ -90,16 +90,16 @@ $accu-orange: #f05514;
 			margin-bottom: 72px;
 		}
 
-		&__frame {
-			@include break-small {
-				transform: initial;
-				position: relative;
-				top: 0;
-				bottom: 0;
-				left: 0;
-				right: 0;
-			}
-		}
+		// &__frame {
+		// 	@include break-small {
+		// 		transform: initial;
+		// 		position: relative;
+		// 		top: 0;
+		// 		bottom: 0;
+		// 		left: 0;
+		// 		right: 0;
+		// 	}
+		// }
 	}
 
 	.wpcom-thumbnail-editor__crops-tab-panel {
@@ -107,15 +107,15 @@ $accu-orange: #f05514;
 		flex-direction: row;
 	}
 
-	button.components-button:hover {
-		color: $accu-orange;
-	}
+	// button.components-button:hover {
+	// 	color: $accu-orange;
+	// }
 
-	.components-tab-panel__tabs-item::after {
-		background: var(--wp-components-color-accent, $accu-orange);
-	}
+	// .components-tab-panel__tabs-item::after {
+	// 	background: var(--wp-components-color-accent, $accu-orange);
+	// }
 
-	.components-tab-panel__tabs-item:focus-visible::before {
-		box-shadow: 0 0 0 var(--wp-admin-border-width-focus) var(--wp-components-color-accent, $accu-orange);
-	}
+	// .components-tab-panel__tabs-item:focus-visible::before {
+	// 	box-shadow: 0 0 0 var(--wp-admin-border-width-focus) var(--wp-components-color-accent, $accu-orange);
+	// }
 }
