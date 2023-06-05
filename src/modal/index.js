@@ -1,5 +1,5 @@
 /* eslint-disable camelcase, no-console */
-/* global $, React */
+/* global jQuery, React */
 
 import {
 	Modal,
@@ -101,16 +101,35 @@ const getSelectionCoordinates = ( image, coordinates, thumbnail ) => {
 	return selection;
 };
 
+const preSaveSelectionCoordinates = ( img, displayImg, coordinates ) => {
+	const { width, height } = img.media_details;
+	const { width: dWidth, height: dHeight } = displayImg;
+	const preSavedCoordinates = [];
+
+	// If the image was scaled down on the selection screen,
+	// then we need to scale up the selection to fit the fullsize image.
+	if ( width > dWidth || height > dHeight ) {
+		const scaleRatio = width / dWidth;
+		for ( const coordinate in coordinates ) {
+			preSavedCoordinates.push(
+				Math.round( coordinates[ coordinate ] * scaleRatio )
+			);
+		}
+	} else {
+		for ( const coordinate in coordinates ) {
+			preSavedCoordinates.push( coordinates[ coordinate ] );
+		}
+	}
+
+	return preSavedCoordinates;
+};
+
 const thumbnailReducer = ( state, action ) => {
 	if ( ! action.tab || ! action.img || ! action.ratioMap ) {
 		return state;
 	}
 
-	const {
-		media_details: { source_url },
-		wpcom_thumbnail_edit: thumbnailEdits,
-	} = action.img;
-
+	const { source_url, wpcom_thumbnail_edit: thumbnailEdits } = action.img;
 	const dimensions = action.ratioMap[ action.tab ].dimensions;
 	const coordinates = thumbnailEdits?.[ action.ratioMap[ action.tab ].name ];
 	return {
@@ -124,8 +143,9 @@ const thumbnailReducer = ( state, action ) => {
 	};
 };
 
-const ImageCropEditor = ( { image, ratioMap, onUpdate } ) => {
+const ImageCropEditor = ( { image, ratioMap } ) => {
 	const cropperRef = useRef();
+
 	const initialThumbnail = () => {
 		const key = Object.keys( ratioMap )?.[ 0 ];
 		const rsp = thumbnailReducer( {}, { tab: key, img: image, ratioMap } );
@@ -158,31 +178,62 @@ const ImageCropEditor = ( { image, ratioMap, onUpdate } ) => {
 		const aspectRatio =
 			ratioMap[ tab.name ].ratio[ 0 ] / ratioMap[ tab.name ].ratio[ 1 ];
 
-		const onCrop = () => {
-			const getSelection = ( { top, left, width, height } ) => {
-				return [ top, left, width + left, height + top ];
-			};
-			const cropBoxData = cropperRef?.current?.cropper?.getCropBoxData();
-			if ( cropBoxData ) {
-				const { wpcom_thumbnail_edit: thumbnailEdits } = image;
-				thumbnailEdits[ ratioMap[ tab.name ].name ] =
-					getSelection( cropBoxData );
+		let isCropperReady = false;
+		const setIsCropperReady = ( isReady ) => {
+			isCropperReady = isReady;
+		};
 
-				// onUpdate( updateImage );
+		const getSelection = ( img, { top, left, width, height } ) => {
+			return preSaveSelectionCoordinates( img, full, [
+				left,
+				top,
+				width + left,
+				height + top,
+			] );
+		};
+
+		const onCrop = () => {
+			const cropBoxData = cropperRef.current.cropper.getCropBoxData();
+			if ( cropBoxData && isCropperReady ) {
+				const { wpcom_thumbnail_edit: thumbnailEdits } = image;
+				thumbnailEdits[ ratioMap[ tab.name ].name ] = getSelection(
+					image,
+					cropBoxData
+				);
 			}
 		};
 
-		const onReady = () => {
+		const getData = ( crop = true ) => {
 			const {
 				selection: { y1: top, x1: left, x2: width, y2: height },
 			} = thumbnail;
 
-			cropperRef?.current?.cropper?.setCropBoxData( {
-				top,
-				left,
+			const defaultData = {
 				width: width - left,
 				height: height - top,
-			} );
+			};
+
+			if ( ! crop ) {
+				return {
+					...defaultData,
+					y: top,
+					x: left,
+				};
+			}
+
+			return {
+				...defaultData,
+				left,
+				top,
+			};
+		};
+
+		const onReady = () => {
+			setIsCropperReady( true );
+			const data = getData();
+
+			cropperRef.current.cropper.setCropBoxData( data );
+			cropperRef.current.cropper.crop();
 		};
 
 		return (
@@ -197,21 +248,29 @@ const ImageCropEditor = ( { image, ratioMap, onUpdate } ) => {
 						'wpcom-thumbnail-editor'
 					) }
 				</p>
-				<Cropper
-					className="wpcom-edit-thumbnail-editor"
-					src={ link }
+				<div
+					className="wpcom-edit-thumbnail-editor__wrapper"
 					style={ { width: full.width, height: full.height } }
-					// Cropper.js options
-					initialAspectRatio={ aspectRatio }
-					aspectRatio={ aspectRatio }
-					crop={ onCrop }
-					ready={ onReady }
-					zoomable={ false }
-					scalable={ false }
-					rotatable={ false }
-					ref={ cropperRef }
-					preview=".img-preview"
-				/>
+				>
+					<Cropper
+						className="wpcom-edit-thumbnail-editor"
+						src={ link }
+						style={ { width: full.width, height: full.height } }
+						// Cropper.js options
+						initialAspectRatio={ aspectRatio }
+						aspectRatio={ aspectRatio }
+						autoCrop={ true }
+						autoCropArea={ 1 }
+						data={ getData( false ) }
+						crop={ onCrop }
+						ready={ onReady }
+						zoomable={ false }
+						scalable={ false }
+						rotatable={ false }
+						ref={ cropperRef }
+						preview=".img-preview"
+					/>
+				</div>
 				<h3>
 					{ __(
 						'Fullsize Thumbnail Preview',
@@ -242,37 +301,160 @@ const ImageCropEditor = ( { image, ratioMap, onUpdate } ) => {
 			className="wpcom-thumbnail-editor__crops-tab-panel"
 			tabs={ tabList }
 			orientation="vertical"
-			onSelect={ ( tabKey ) =>
-				setThumbnail( { tab: tabKey, img: image, ratioMap } )
-			}
+			onSelect={ ( tabKey ) => {
+				setThumbnail( { tab: tabKey, img: image, ratioMap } );
+			} }
 			children={ renderTabCropEditView }
 		/>
 	);
 };
 
 const addRTE = ( id ) => {
-	let mce_options = {};
-	const { tinyMCEPreInit } = window;
-	if ( typeof tinymce !== 'undefined' ) {
-		if ( typeof tinyMCEPreInit.mceInit[ id ] === 'undefined' ) {
-			mce_options = $.extend(
-				true,
-				{},
-				tinyMCEPreInit.mceInit[ 'fm--0' ]
-			);
-			mce_options.body_class = mce_options.body_class.replace(
-				id,
-				'fm--0'
-			);
-			mce_options.selector = mce_options.selector.replace( id, 'fm--0' );
-			mce_options.wp_skip_init = false;
-			tinyMCEPreInit.mceInit[ id ] = mce_options;
-		}
+	const { origin, tinyMCEPreInit } = window;
+	const mce_options = {
+		theme: 'modern',
+		skin: 'lightgray',
+		language: 'en',
+		formats: {
+			alignleft: [
+				{
+					selector: 'p,h1,h2,h3,h4,h5,h6,td,th,div,ul,ol,li',
+					styles: {
+						textAlign: 'left',
+					},
+					deep: false,
+					remove: 'none',
+				},
+				{
+					selector: 'img,table,dl.wp-caption',
+					classes: [ 'alignleft' ],
+					deep: false,
+					remove: 'none',
+				},
+			],
+			aligncenter: [
+				{
+					selector: 'p,h1,h2,h3,h4,h5,h6,td,th,div,ul,ol,li',
+					styles: {
+						textAlign: 'center',
+					},
+					deep: false,
+					remove: 'none',
+				},
+				{
+					selector: 'img,table,dl.wp-caption',
+					classes: [ 'aligncenter' ],
+					deep: false,
+					remove: 'none',
+				},
+			],
+			alignright: [
+				{
+					selector: 'p,h1,h2,h3,h4,h5,h6,td,th,div,ul,ol,li',
+					styles: {
+						textAlign: 'right',
+					},
+					deep: false,
+					remove: 'none',
+				},
+				{
+					selector: 'img,table,dl.wp-caption',
+					classes: [ 'alignright' ],
+					deep: false,
+					remove: 'none',
+				},
+			],
+			strikethrough: {
+				inline: 'del',
+				deep: true,
+				split: true,
+			},
+		},
+		relative_urls: false,
+		remove_script_host: false,
+		convert_urls: false,
+		browser_spellcheck: true,
+		fix_list_elements: true,
+		entities: '38,amp,60,lt,62,gt',
+		entity_encoding: 'raw',
+		keep_styles: false,
+		cache_suffix: 'wp-mce-49110-20201110',
+		resize: 'vertical',
+		menubar: false,
+		branding: false,
+		preview_styles:
+			'font-family font-size font-weight font-style text-decoration text-transform',
+		end_container_on_empty_block: true,
+		wpeditimage_html5_captions: true,
+		wp_lang_attr: 'en-US',
+		wp_keep_scroll_position: false,
+		wp_shortcut_labels: {
+			'Heading 1': 'access1',
+			'Heading 2': 'access2',
+			'Heading 3': 'access3',
+			'Heading 4': 'access4',
+			'Heading 5': 'access5',
+			'Heading 6': 'access6',
+			Paragraph: 'access7',
+			Blockquote: 'accessQ',
+			Underline: 'metaU',
+			Strikethrough: 'accessD',
+			Bold: 'metaB',
+			Italic: 'metaI',
+			Code: 'accessX',
+			'Align center': 'accessC',
+			'Align right': 'accessR',
+			'Align left': 'accessL',
+			Justify: 'accessJ',
+			Cut: 'metaX',
+			Copy: 'metaC',
+			Paste: 'metaV',
+			'Select all': 'metaA',
+			Undo: 'metaZ',
+			Redo: 'metaY',
+			'Bullet list': 'accessU',
+			'Numbered list': 'accessO',
+			'Insert/edit image': 'accessM',
+			'Insert/edit link': 'metaK',
+			'Remove link': 'accessS',
+			'Toolbar Toggle': 'accessZ',
+			'Insert Read More tag': 'accessT',
+			'Insert Page Break tag': 'accessP',
+			'Distraction-free writing mode': 'accessW',
+			'Add Media': 'accessM',
+			'Keyboard Shortcuts': 'accessH',
+		},
+		content_css: `${ origin }/wp-includes/css/dashicons.min.css,${ origin }/wp-includes/js/tinymce/skins/wordpress/wp-content.css`,
+		plugins:
+			'charmap,colorpicker,hr,lists,media,paste,tabfocus,textcolor,fullscreen,wordpress,wpautoresize,wpeditimage,wpemoji,wpgallery,wplink,wpdialogs,wptextpattern,wpview,image',
+		external_plugins: {},
+		selector: '#' + id,
+		wpautop: true,
+		indent: false,
+		toolbar1:
+			'formatselect,bold,italic,bullist,numlist,blockquote,alignleft,aligncenter,alignright,link,wp_more,spellchecker,fullscreen,wp_adv',
+		toolbar2:
+			'strikethrough,hr,forecolor,pastetext,removeformat,charmap,outdent,indent,undo,redo,wp_help',
+		toolbar3: '',
+		toolbar4: '',
+		tabfocus_elements: ':prev,:next',
+		body_class:
+			id +
+			' post-type-attachment post-status-inherit page-template-default locale-en-us',
+		wp_skip_init: false,
+		extended_valid_elements: 'script[charset|defer|language|src|type]',
+	};
+
+	if (
+		typeof tinymce !== 'undefined' &&
+		typeof tinyMCEPreInit.mceInit[ id ] === 'undefined'
+	) {
+		tinyMCEPreInit.mceInit[ id ] = mce_options;
 	}
 	return mce_options;
 };
 
-export function ImageEditor( { image, ratioMap, onChange } ) {
+export function ImageEditor( { image, ratioMap } ) {
 	const tinyRef = useRef();
 	const [ alt, setAlt ] = useState( '' );
 	const [ credit, setCredit ] = useState( '' );
@@ -282,19 +464,15 @@ export function ImageEditor( { image, ratioMap, onChange } ) {
 	// Need to fix this so that it isn't dependent on fieldmanager field.
 	const opts = addRTE( id );
 
-	const tinyMCE =
-		'//3013-production.vipdev.lndo.site/wp-includes/js/tinymce/tinymce.min.js';
-
-	const onSelect = ( tabName ) => {
-		console.log( 'Selecting tab', tabName );
-		onChange();
-	};
+	const tinyMCE = `${ window.origin }/wp-includes/js/tinymce/tinymce.min.js`;
 
 	const log = () => {
 		if ( tinyRef.current ) {
 			console.log( tinyRef.current.getContent() );
 		}
 	};
+
+	console.log( { image } );
 
 	const children = ( tab ) => (
 		<>
@@ -331,11 +509,7 @@ export function ImageEditor( { image, ratioMap, onChange } ) {
 					<button onClick={ log }>Log editor content</button>
 				</>
 			) : (
-				<ImageCropEditor
-					image={ image }
-					ratioMap={ ratioMap }
-					onUpdate={ onSelect }
-				/>
+				<ImageCropEditor image={ image } ratioMap={ ratioMap } />
 			) }
 		</>
 	);
@@ -344,7 +518,6 @@ export function ImageEditor( { image, ratioMap, onChange } ) {
 		<TabPanel
 			className="wpcom-thumbnail-editor__image-edit-tab-panel"
 			activeClass="active-tab"
-			onSelect={ onSelect }
 			tabs={ [
 				{
 					name: 'fields',
@@ -375,7 +548,7 @@ export function ImageEditModal( { imageIds, ratioMap } ) {
 		}
 	}, [ currentPage ] );
 
-	const [ updateImages, setUpdateImages ] = useReducer( ( state, update ) => {
+	const [ updateImages ] = useReducer( ( state, update ) => {
 		if ( update ) {
 			const index = state.findIndex( ( img ) => img.id === update.id );
 			if ( -1 === index ) {
@@ -495,7 +668,6 @@ export function ImageEditModal( { imageIds, ratioMap } ) {
 									<ImageEditor
 										image={ editImage() }
 										ratioMap={ ratioMap }
-										onChange={ setUpdateImages }
 									/>
 								</div>
 							</div>
