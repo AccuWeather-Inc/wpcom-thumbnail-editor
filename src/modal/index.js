@@ -456,8 +456,8 @@ const addRTE = ( id ) => {
 
 export function ImageEditor( { image, ratioMap } ) {
 	const tinyRef = useRef();
-	const [ alt, setAlt ] = useState( '' );
-	const [ credit, setCredit ] = useState( '' );
+	const [ alt, setAlt ] = useState( image.alt_text );
+	const [ credit, setCredit ] = useState( image?.meta?.credits );
 
 	const id = 'editor-' + image.id;
 
@@ -497,16 +497,26 @@ export function ImageEditor( { image, ratioMap } ) {
 						value={ alt }
 						onChange={ setAlt }
 					/>
-					<Editor
-						id={ id }
-						tinymceScriptSrc={ tinyMCE }
-						onInit={ ( evt, _editor ) =>
-							( tinyRef.current = _editor )
-						}
-						initialValue="<p>This is the initial content of the editor.</p>"
-						init={ opts }
-					/>
-					<button onClick={ log }>Log editor content</button>
+					<div className="components-base-control wpcom-thumbnail-editor__image-caption">
+						<div className="components-base-control__field">
+							<label
+								className="components-base-control__label"
+								htmlFor={ id }
+							>
+								{ __( 'Caption', 'wpcom-thumbnail-editor' ) }
+							</label>
+							<Editor
+								id={ id }
+								tinymceScriptSrc={ tinyMCE }
+								onInit={ ( evt, _editor ) =>
+									( tinyRef.current = _editor )
+								}
+								initialValue={ image.caption.raw }
+								init={ opts }
+							/>
+						</div>
+						<button onClick={ log }>Log editor content</button>
+					</div>
 				</>
 			) : (
 				<ImageCropEditor image={ image } ratioMap={ ratioMap } />
