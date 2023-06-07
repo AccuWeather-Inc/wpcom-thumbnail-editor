@@ -1,4 +1,4 @@
-import { ImageEditModal } from './modal';
+import ImageEditModal from './components/modal';
 import './main.scss';
 
 const {
@@ -27,13 +27,15 @@ function waitForElm( selector ) {
 }
 
 const load = () => {
-	const domElement = document.getElementById( 'thumbnail' );
+	const domElement = document.getElementById(
+		'wpcom-thumbnail-editor-modal'
+	);
 	if ( domElement && domElement?.dataset?.id ) {
 		const ratioMap = domElement?.dataset?.sizes
 			? JSON.parse( domElement.dataset.sizes )
 			: [];
 		const props = {
-			imageIds: [ domElement.dataset.id ],
+			imageIds: [ Number( domElement.dataset.id ) ],
 			ratioMap,
 		};
 
@@ -46,4 +48,4 @@ const load = () => {
 	}
 };
 
-waitForElm( '#thumbnail' ).then( () => load() );
+waitForElm( '#wpcom-thumbnail-editor-modal' ).then( () => load() );

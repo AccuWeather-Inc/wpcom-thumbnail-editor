@@ -334,7 +334,7 @@ class WPcom_Thumbnail_Editor {
 			$size_map[ $css_id ]['dimensions'] = $this->get_thumbnail_dimensions( $value );
 		}
 
-		return '<div id="thumbnail" '
+		return '<div id="wpcom-thumbnail-editor-modal" '
 			. 'data-id="' . $attachment->ID
 			. '" data-sizes="' . htmlspecialchars( wp_json_encode( $size_map ), ENT_QUOTES, 'UTF-8' )
 			. '">Loading...</div>';
