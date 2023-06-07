@@ -1,14 +1,14 @@
-/* eslint-disable camelcase, no-console */
-/* global jQuery, React */
+/* eslint-disable camelcase */
+/* global React */
 
 import {
 	Modal,
 	Button,
 	Spinner,
 	TabPanel,
-	Guide,
 	TextControl,
 	TextareaControl,
+	Guide as PageControl,
 } from '@wordpress/components';
 import { focus } from '@wordpress/dom';
 import { LEFT, RIGHT } from '@wordpress/keycodes';
@@ -17,7 +17,6 @@ import { Editor } from '@tinymce/tinymce-react';
 import Cropper from 'react-cropper';
 
 const {
-	apiFetch,
 	i18n: { __ },
 	element: { useRef, useState, useEffect, useMemo, useReducer },
 	data: { useSelect },
@@ -168,7 +167,8 @@ const ImageCropEditor = ( { image, ratioMap } ) => {
 		return tabs;
 	}, [ ratioMap ] );
 
-	const renderTabCropEditView = ( tab ) => {
+	const RenderTabCropEditView = ( { tab } ) => {
+		const [ isCropperReady, setIsCropperReady ] = useState( false );
 		const {
 			link,
 			media_details: { sizes },
@@ -177,11 +177,6 @@ const ImageCropEditor = ( { image, ratioMap } ) => {
 		const full = getDownsized( sizes );
 		const aspectRatio =
 			ratioMap[ tab.name ].ratio[ 0 ] / ratioMap[ tab.name ].ratio[ 1 ];
-
-		let isCropperReady = false;
-		const setIsCropperReady = ( isReady ) => {
-			isCropperReady = isReady;
-		};
 
 		const getSelection = ( img, { top, left, width, height } ) => {
 			return preSaveSelectionCoordinates( img, full, [
@@ -203,37 +198,19 @@ const ImageCropEditor = ( { image, ratioMap } ) => {
 			}
 		};
 
-		const getData = ( crop = true ) => {
+		const onReady = () => {
 			const {
 				selection: { y1: top, x1: left, x2: width, y2: height },
 			} = thumbnail;
 
-			const defaultData = {
+			cropperRef.current.cropper.setCropBoxData( {
 				width: width - left,
 				height: height - top,
-			};
-
-			if ( ! crop ) {
-				return {
-					...defaultData,
-					y: top,
-					x: left,
-				};
-			}
-
-			return {
-				...defaultData,
 				left,
 				top,
-			};
-		};
-
-		const onReady = () => {
-			setIsCropperReady( true );
-			const data = getData();
-
-			cropperRef.current.cropper.setCropBoxData( data );
+			} );
 			cropperRef.current.cropper.crop();
+			setIsCropperReady( true );
 		};
 
 		return (
@@ -259,9 +236,6 @@ const ImageCropEditor = ( { image, ratioMap } ) => {
 						// Cropper.js options
 						initialAspectRatio={ aspectRatio }
 						aspectRatio={ aspectRatio }
-						autoCrop={ true }
-						autoCropArea={ 1 }
-						data={ getData( false ) }
 						crop={ onCrop }
 						ready={ onReady }
 						zoomable={ false }
@@ -304,7 +278,7 @@ const ImageCropEditor = ( { image, ratioMap } ) => {
 			onSelect={ ( tabKey ) => {
 				setThumbnail( { tab: tabKey, img: image, ratioMap } );
 			} }
-			children={ renderTabCropEditView }
+			children={ ( tab ) => <RenderTabCropEditView tab={ tab } /> }
 		/>
 	);
 };
@@ -461,73 +435,22 @@ export function ImageEditor( { image, ratioMap } ) {
 
 	const id = 'editor-' + image.id;
 
-	// Need to fix this so that it isn't dependent on fieldmanager field.
 	const opts = addRTE( id );
 
 	const tinyMCE = `${ window.origin }/wp-includes/js/tinymce/tinymce.min.js`;
 
 	const log = () => {
 		if ( tinyRef.current ) {
+			// eslint-disable-next-line no-console
 			console.log( tinyRef.current.getContent() );
 		}
 	};
-
-	console.log( { image } );
-
-	const children = ( tab ) => (
-		<>
-			{ 'fields' === tab.name ? (
-				<>
-					<TextControl
-						label="Credits"
-						help={ __(
-							'This is a required Field.',
-							'wpcom-thumbnail-editor'
-						) }
-						value={ credit }
-						onChange={ setCredit }
-					/>
-					<TextareaControl
-						label={ __( 'Alt Text', 'wpcom-thumbnail-editor' ) }
-						help={ __(
-							'Text to describe the image to screen readers.',
-							'wpcom-thumbnail-editor'
-						) }
-						className="wpcom-thumbnail-editor__image-alt"
-						value={ alt }
-						onChange={ setAlt }
-					/>
-					<div className="components-base-control wpcom-thumbnail-editor__image-caption">
-						<div className="components-base-control__field">
-							<label
-								className="components-base-control__label"
-								htmlFor={ id }
-							>
-								{ __( 'Caption', 'wpcom-thumbnail-editor' ) }
-							</label>
-							<Editor
-								id={ id }
-								tinymceScriptSrc={ tinyMCE }
-								onInit={ ( evt, _editor ) =>
-									( tinyRef.current = _editor )
-								}
-								initialValue={ image.caption.raw }
-								init={ opts }
-							/>
-						</div>
-						<button onClick={ log }>Log editor content</button>
-					</div>
-				</>
-			) : (
-				<ImageCropEditor image={ image } ratioMap={ ratioMap } />
-			) }
-		</>
-	);
 
 	return (
 		<TabPanel
 			className="wpcom-thumbnail-editor__image-edit-tab-panel"
 			activeClass="active-tab"
+			initialTabName="fields"
 			tabs={ [
 				{
 					name: 'fields',
@@ -540,7 +463,66 @@ export function ImageEditor( { image, ratioMap } ) {
 					className: 'tab-crops',
 				},
 			] }
-			children={ children }
+			children={ ( tab ) => (
+				<>
+					{ 'fields' === tab.name ? (
+						<>
+							<TextControl
+								label="Credits"
+								help={ __(
+									'This is a required Field.',
+									'wpcom-thumbnail-editor'
+								) }
+								value={ credit }
+								onChange={ setCredit }
+							/>
+							<TextareaControl
+								label={ __(
+									'Alt Text',
+									'wpcom-thumbnail-editor'
+								) }
+								help={ __(
+									'Text to describe the image to screen readers.',
+									'wpcom-thumbnail-editor'
+								) }
+								className="wpcom-thumbnail-editor__image-alt"
+								value={ alt }
+								onChange={ setAlt }
+							/>
+							<div className="components-base-control wpcom-thumbnail-editor__image-caption">
+								<div className="components-base-control__field">
+									<label
+										className="components-base-control__label"
+										htmlFor={ id }
+									>
+										{ __(
+											'Caption',
+											'wpcom-thumbnail-editor'
+										) }
+									</label>
+									<Editor
+										id={ id }
+										tinymceScriptSrc={ tinyMCE }
+										onInit={ ( evt, _editor ) =>
+											( tinyRef.current = _editor )
+										}
+										initialValue={ image.caption.raw }
+										init={ opts }
+									/>
+								</div>
+								<button onClick={ log }>
+									Log editor content
+								</button>
+							</div>
+						</>
+					) : (
+						<ImageCropEditor
+							image={ image }
+							ratioMap={ ratioMap }
+						/>
+					) }
+				</>
+			) }
 		/>
 	);
 }
@@ -554,7 +536,7 @@ export function ImageEditModal( { imageIds, ratioMap } ) {
 		// Each time we change the current page, start from the first element of the page.
 		// This also solves any focus loss that can happen.
 		if ( modalRef.current ) {
-			focus.tabbable.find( modalRef.current )?.[ 0 ]?.focus();
+			focus.focusable.find( modalRef.current )?.[ 2 ]?.click();
 		}
 	}, [ currentPage ] );
 
@@ -669,7 +651,7 @@ export function ImageEditModal( { imageIds, ratioMap } ) {
 							<div className="components-guide__container">
 								<div className="components-guide__page">
 									{ images.length > 1 && (
-										<Guide.PageControl
+										<PageControl
 											currentPage={ currentPage }
 											numberOfPages={ images.length }
 											setCurrentPage={ setCurrentPage }
