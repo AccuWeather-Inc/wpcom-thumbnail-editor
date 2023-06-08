@@ -57,5 +57,11 @@
 	"support": {
 		"issues": "https://github.com/Automattic/wpcom-thumbnail-editor/issues",
 		"source": "https://github.com/Automattic/wpcom-thumbnail-editor"
+	},
+	"config": {
+		"allow-plugins": {
+			"composer/installers": true,
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		}
 	}
 }
