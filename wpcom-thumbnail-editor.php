@@ -85,7 +85,6 @@ class WPcom_Thumbnail_Editor {
 			add_action( 'admin_notices', array( &$this, 'jetpack_photon_url_message' ) );
 
 			add_action( 'admin_enqueue_scripts', array( &$this, 'enqueue_admin_scriptreset' ) );
-
 		}
 
 		// using a global for now, maybe these values could be set in constructor in future?
@@ -396,8 +395,15 @@ class WPcom_Thumbnail_Editor {
 		return $html;
 	}
 
-	function get_size_label( $size_name ) {
-
+	/**
+	 * Get the label for the given image size.
+	 *
+	 * @param string $size_name The registered image size.
+	 *
+	 * @return string The label associated to the passed size, or the sizename if none exists.
+	 */
+	public function get_size_label( $size_name ) {
+        // phpcs:disable
 		$size_names = apply_filters(
 			'image_size_names_choose',
 			array(
@@ -407,6 +413,7 @@ class WPcom_Thumbnail_Editor {
 				'full'      => __( 'Full Size' ),
 			)
 		);
+        // phpcs:enable
 
 		if ( isset( $size_names[ $size_name ] ) ) {
 			return $size_names[ $size_name ];
@@ -414,6 +421,7 @@ class WPcom_Thumbnail_Editor {
 			return $size_name;
 		}
 	}
+
 	/**
 	 * Outputs the HTML for the thumbnail crop selection screen.
 	 */
@@ -996,19 +1004,14 @@ class WPcom_Thumbnail_Editor {
 		$url = wp_get_attachment_url( $attachment_id );
 
 		$params = array(
-			'crop'   =>
-						  $selection_x1 . 'px,'
-						. $selection_y1 . 'px,'
-						. ( $selection_x2 - $selection_x1 ) . 'px,'
-						. ( $selection_y2 - $selection_y1 ) . 'px',
-
+			'crop'   => $selection_x1 . 'px,'
+				. $selection_y1 . 'px,'
+				. ( $selection_x2 - $selection_x1 ) . 'px,'
+				. ( $selection_y2 - $selection_y1 ) . 'px',
 			'resize' => $thumbnail_size['width'] . ',' . $thumbnail_size['height'],
 		);
 
 		$url = $url . '?' . http_build_query( $params );
-
-		// Ensure all URLs are HTTPS
-		$url = str_replace( 'http://', 'https://', $url );
 
 		return array( $url, $thumbnail_size['width'], $thumbnail_size['height'], true );
 	}
@@ -1027,7 +1030,6 @@ class WPcom_Thumbnail_Editor {
 		$size,
 		$src
 	) {
-
 		if ( empty( $sources ) ) {
 			return $sources;
 		}
