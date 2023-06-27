@@ -72,7 +72,7 @@ const getSelectionCoordinates = ( image, coordinates, thumbnail ) => {
 
 		// Take the width and divide by the thumbnail's aspect ratio.
 		const selectedWidth = Math.round(
-			downsizedImg.width / ( downsizedImg.height / downsizedImg.width )
+			downsizedImg.height / ( thumbnail.height / thumbnail.width )
 		);
 
 		selection = setSelection( [

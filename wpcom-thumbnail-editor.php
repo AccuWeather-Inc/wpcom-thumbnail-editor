@@ -382,11 +382,11 @@ class WPcom_Thumbnail_Editor {
 				$html .= ' target="_blank"';
 			}
 
-				$html     .= '>';
-					$html .= '<strong>' . esc_html( $image_name ) . '</strong><br />';
-					$html .= '<img src="' . esc_url( $thumbnail_url ) . '" alt="' . esc_attr( $size ) . '" />';
-				$html     .= '</a>';
-			$html         .= '</div>';
+				$html .= '>';
+				$html .= '<strong>' . esc_html( $image_name ) . '</strong><br />';
+				$html .= '<img src="' . esc_url( $thumbnail_url ) . '" alt="' . esc_attr( $size ) . '" />';
+				$html .= '</a>';
+			$html     .= '</div>';
 		}
 
 		$html .= '</div>';
