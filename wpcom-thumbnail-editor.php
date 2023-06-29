@@ -85,6 +85,8 @@ class WPcom_Thumbnail_Editor {
 			add_action( 'admin_notices', array( &$this, 'jetpack_photon_url_message' ) );
 
 			add_action( 'admin_enqueue_scripts', array( &$this, 'enqueue_admin_scriptreset' ) );
+
+			add_action( 'in_admin_footer', array( &$this, 'setup_modal_element' ) );
 		}
 
 		// using a global for now, maybe these values could be set in constructor in future?
@@ -112,6 +114,27 @@ class WPcom_Thumbnail_Editor {
 		}
 
 		add_action( 'rest_api_init', array( $this, 'register_attachment_meta' ) );
+	}
+
+	/**
+	 * Returns wrapping div for modal entry point.
+	 *
+	 * @return void
+	 */
+	public function setup_modal_element() {
+		if ( function_exists( 'get_current_screen' ) ) {
+			$post_type = get_current_screen()->post_type;
+		} else {
+			return;
+		}
+
+		if (
+			'attachment' === $post_type
+		) :
+			?>
+			<div id="wpcom-thumbnail-editor-modal"><!-- React App Load Here --></div>
+			<?php
+		endif;
 	}
 
 	/**
@@ -146,6 +169,7 @@ class WPcom_Thumbnail_Editor {
 	 */
 	public function enqueue_admin_scriptreset( $hook ) {
 		global $post_type;
+
 		/**
 		 * Filter to support custom post types to only load scripts when necessary.
 		 *
@@ -159,6 +183,16 @@ class WPcom_Thumbnail_Editor {
 			$build_info = $this->load_asset();
 			wp_enqueue_script( 'imgareaselect' );
 			wp_enqueue_style( 'imgareaselect' );
+			// Create a localized script variable to be used in JS/React App.
+			wp_localize_script(
+				'react',
+				'thumbnailEditorObj',
+				array(
+					'sizes'    => $this->generate_size_map(),
+					'imageIds' => array(),
+					'addedIds' => array(),
+				)
+			);
 
 			wp_enqueue_style(
 				'thumbnail-style',
@@ -169,7 +203,7 @@ class WPcom_Thumbnail_Editor {
 			wp_enqueue_script(
 				'thumbnail-script',
 				plugin_dir_url( __FILE__ ) . 'build/index.js',
-				$build_info['dependencies'],
+				array_merge( $build_info['dependencies'], array( 'jquery' ) ),
 				$build_info['version'],
 				true
 			);
@@ -309,13 +343,11 @@ class WPcom_Thumbnail_Editor {
 	}
 
 	/**
-	 * Helper method to generate div container for modal edit crop view.
+	 * Generate the Size Map Object necessary for React Modal.
 	 *
-	 * @param \WP_Post $attachment The attachment currently being edited.
-	 *
-	 * @return string The html for the div container.
+	 * @return array
 	 */
-	public function generate_modal_container( $attachment ) {
+	public function generate_size_map() {
 		$sizes = $this->use_ratio_map ? $this->get_image_sizes_by_ratio() : $this->get_intermediate_image_sizes();
 
 		$sizes = apply_filters( 'wpcom_thumbnail_editor_image_size_names_choose', $sizes );
@@ -332,10 +364,20 @@ class WPcom_Thumbnail_Editor {
 			$size_map[ $css_id ]['ratio']      = $ratio;
 			$size_map[ $css_id ]['dimensions'] = $this->get_thumbnail_dimensions( $value );
 		}
+		return $size_map;
+	}
 
+	/**
+	 * Helper method to generate div container for modal edit crop view.
+	 *
+	 * @param \WP_Post $attachment The attachment currently being edited.
+	 *
+	 * @return string The html for the div container.
+	 */
+	public function generate_modal_container( $attachment ) {
+		$size_map = $this->generate_size_map();
 		return '<div id="wpcom-thumbnail-editor-modal" '
 			. 'data-id="' . $attachment->ID
-			. '" data-sizes="' . htmlspecialchars( wp_json_encode( $size_map ), ENT_QUOTES, 'UTF-8' )
 			. '">Loading...</div>';
 	}
 

@@ -1,4 +1,4 @@
-/* global React */
+/* global React, thumbnailEditorObj */
 
 import {
 	Modal,
@@ -19,7 +19,7 @@ const {
 
 const ImageEditModal = ( { imageIds, ratioMap } ) => {
 	const modalRef = useRef();
-	const [ isOpen, setOpen ] = useState( null );
+	const [ isOpen, setOpen ] = useState( true );
 	const [ currentPage, setCurrentPage ] = useState( 0 );
 
 	useEffect( () => {
@@ -96,13 +96,14 @@ const ImageEditModal = ( { imageIds, ratioMap } ) => {
 	const onSave = () => {
 		// Handle save of all updateImages.
 		setOpen( false );
+		thumbnailEditorObj.addedIds = [];
 	};
 
 	return (
 		<>
-			<Button variant="secondary" onClick={ () => setOpen( true ) }>
+			{ /* <Button variant="secondary" onClick={ () => setOpen( true ) }>
 				{ __( 'Edit image', 'wpcom-thumbnail-editor' ) }
-			</Button>
+			</Button> */ }
 			{ isOpen && (
 				<>
 					{ ! images || 0 === images.length ? (
@@ -130,7 +131,10 @@ const ImageEditModal = ( { imageIds, ratioMap } ) => {
 								'Edit Image',
 								'wpcom-thumbnail-editor'
 							) }
-							onRequestClose={ () => setOpen( false ) }
+							onRequestClose={ () => {
+								setOpen( false );
+								thumbnailEditorObj.addedIds = [];
+							} }
 							isFullScreen
 							shouldCloseOnClickOutside={ false }
 							shouldCloseOnEsc={ false }

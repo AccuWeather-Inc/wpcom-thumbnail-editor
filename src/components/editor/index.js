@@ -147,7 +147,8 @@ const addRTE = ( id ) => {
 
 	if (
 		typeof tinymce !== 'undefined' &&
-		typeof tinyMCEPreInit.mceInit[ id ] === 'undefined'
+		typeof tinyMCEPreInit?.mceInit !== 'undefined' &&
+		typeof tinyMCEPreInit.mceInit?.[ id ] === 'undefined'
 	) {
 		tinyMCEPreInit.mceInit[ id ] = mceOptions;
 	}

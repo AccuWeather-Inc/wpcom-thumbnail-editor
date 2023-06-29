@@ -1,4 +1,4 @@
-/* global $, MutationObserver */
+/* global jQuery, MutationObserver, thumbnailEditorObj */
 import ImageEditModal from './components/modal';
 import './main.scss';
 
@@ -8,33 +8,86 @@ const {
 } = wp;
 
 const observerConfig = {
+	attributeFilter: [ 'data-id' ],
 	childList: true,
 	subtree: true,
 };
 
+const mediaLibrarySelector = 'div.attachments-wrapper ul';
+
+const appendImageIdFromNode = ( list, imageNode ) => {
+	if ( imageNode && imageNode.nodeName === 'LI' && imageNode.dataset?.id ) {
+		const id = Number( imageNode.dataset.id );
+		if (
+			! thumbnailEditorObj.imageIds.includes( id ) &&
+			! list.includes( id )
+		) {
+			list.push( id );
+		}
+	}
+};
+
+const initImageIds = () => {
+	const mediaLibraryNode = document.querySelector( mediaLibrarySelector );
+	if (
+		mediaLibraryNode &&
+		thumbnailEditorObj?.imageIds &&
+		! thumbnailEditorObj.imageIds.length
+	) {
+		mediaLibraryNode.childNodes.forEach( ( imageNode ) =>
+			appendImageIdFromNode( thumbnailEditorObj.imageIds, imageNode )
+		);
+	}
+};
+
+const loadThumbnailEditorModal = ( imageIds, element = null ) => {
+	const modalContainer =
+		element ?? document.getElementById( 'wpcom-thumbnail-editor-modal' );
+	if ( ! modalContainer ) {
+		return;
+	}
+
+	const props = {
+		imageIds,
+		ratioMap: thumbnailEditorObj?.sizes ?? null,
+	};
+
+	const uiElement = createElement( ImageEditModal, props );
+	if ( createRoot ) {
+		createRoot( modalContainer ).render( uiElement );
+	} else {
+		render( uiElement, modalContainer );
+	}
+};
+
 // temp work for handling on popup on image upload.
 function watchForUploadedImages() {
-	const selector = 'div.attachments-wrapper ul';
 	// Watch this list for changes in order to handle collection of uploaded images.
-	const imgModels = wp?.media?.model?.Attachments?.all?.models;
-
-	const mediaLibraryNode = document.querySelector( selector );
-	if ( mediaLibraryNode ) {
-		const addedImagesCallback = ( mutations, observer ) => {
-			const addedImages = [];
+	const mediaLibraryNode = document.querySelector( mediaLibrarySelector );
+	if ( mediaLibraryNode && thumbnailEditorObj?.addedIds ) {
+		const addedImagesCallback = ( mutations ) => {
 			mutations.forEach( ( { addedNodes } ) => {
-				const addedNode = addedNodes?.[ 0 ];
-				if ( addedNode && addedNode.nodeName === 'LI' ) {
-					addedImages.push( addedNode );
-				}
+				addedNodes.forEach( ( addedNode ) =>
+					appendImageIdFromNode(
+						thumbnailEditorObj.addedIds,
+						addedNode
+					)
+				);
 			} );
-			console.log( { addedImages } );
+
+			if ( thumbnailEditorObj.addedIds.length ) {
+				thumbnailEditorObj.imageIds = [
+					...thumbnailEditorObj.addedIds,
+					...thumbnailEditorObj.imageIds,
+				];
+				loadThumbnailEditorModal( thumbnailEditorObj.addedIds );
+			}
 		};
 		const observer = new MutationObserver( addedImagesCallback );
 		observer.observe( mediaLibraryNode, observerConfig );
-		$( document ).on( 'click', '.uploader-inline > button', () => {
+
+		jQuery( document ).on( 'click', '.uploader-inline > button', () => {
 			observer.disconnect();
-			console.log('Removed observer.')
 		} );
 	}
 }
@@ -61,20 +114,10 @@ const load = () => {
 		'wpcom-thumbnail-editor-modal'
 	);
 	if ( domElement && domElement?.dataset?.id ) {
-		const ratioMap = domElement?.dataset?.sizes
-			? JSON.parse( domElement.dataset.sizes )
-			: [];
-		const props = {
-			imageIds: [ Number( domElement.dataset.id ) ],
-			ratioMap,
-		};
-
-		const uiElement = createElement( ImageEditModal, props );
-		if ( createRoot ) {
-			createRoot( domElement ).render( uiElement );
-		} else {
-			render( uiElement, domElement );
-		}
+		loadThumbnailEditorModal(
+			[ Number( domElement.dataset.id ) ],
+			domElement
+		);
 	}
 };
 
@@ -82,20 +125,9 @@ domReady( () => {
 	waitForElm( '#wpcom-thumbnail-editor-modal' ).then( () => load() );
 } );
 
-$( window ).ready( () => {
-	// wp.media.frame.on('all', function(e) {
-	// 	// watchForUploadedImages();
-	// 	console.log(e);
-	// });
-	wp.media.frame.browserView.attachments.controller.on(
-		'all',
-		function ( e ) {
-			// watchForUploadedImages();
-			// library:selection:add
-			console.log( e );
-		}
-	);
+jQuery( window ).ready( () => {
 	wp.media?.frame.on( 'toggle:upload:attachment', () => {
+		initImageIds();
 		watchForUploadedImages();
 	} );
 } );
