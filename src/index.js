@@ -14,7 +14,6 @@ const observerConfig = {
 };
 
 const mediaLibrarySelector = 'div.attachments-wrapper ul';
-
 const appendImageIdFromNode = ( list, imageNode ) => {
 	if ( imageNode && imageNode.nodeName === 'LI' && imageNode.dataset?.id ) {
 		const id = Number( imageNode.dataset.id );

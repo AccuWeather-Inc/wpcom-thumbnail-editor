@@ -1,12 +1,10 @@
-const defaults = require('@wordpress/scripts/config/webpack.config');
-const path = require( 'path' );
-
-const isProduction = process.env.NODE_ENV === 'production';
+const defaults = require( '@wordpress/scripts/config/webpack.config' );
 
 const webpackConfig = {
 	...defaults,
 	externals: {
 		react: 'React',
+		jquery: '$',
 		'react-dom': 'ReactDOM',
 	},
 };
