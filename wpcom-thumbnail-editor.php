@@ -375,8 +375,7 @@ class WPcom_Thumbnail_Editor {
 	 * @return string The html for the div container.
 	 */
 	public function generate_modal_container( $attachment ) {
-		$size_map = $this->generate_size_map();
-		return '<div id="wpcom-thumbnail-editor-modal" '
+		return '<div id="wpcom-thumbnail-editor-modal-button" '
 			. 'data-id="' . $attachment->ID
 			. '">Loading...</div>';
 	}

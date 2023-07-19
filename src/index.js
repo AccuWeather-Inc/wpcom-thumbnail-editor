@@ -39,7 +39,11 @@ const initImageIds = () => {
 	}
 };
 
-const loadThumbnailEditorModal = ( imageIds, element = null ) => {
+const loadThumbnailEditorModal = (
+	imageIds,
+	element = null,
+	startOpened = false
+) => {
 	const modalContainer =
 		element ?? document.getElementById( 'wpcom-thumbnail-editor-modal' );
 	if ( ! modalContainer ) {
@@ -49,6 +53,7 @@ const loadThumbnailEditorModal = ( imageIds, element = null ) => {
 	const props = {
 		imageIds,
 		ratioMap: thumbnailEditorObj?.sizes ?? null,
+		startOpened,
 	};
 
 	const uiElement = createElement( ImageEditModal, props );
@@ -79,7 +84,11 @@ function watchForUploadedImages() {
 					...thumbnailEditorObj.addedIds,
 					...thumbnailEditorObj.imageIds,
 				];
-				loadThumbnailEditorModal( thumbnailEditorObj.addedIds );
+				loadThumbnailEditorModal(
+					thumbnailEditorObj.addedIds,
+					null,
+					true
+				);
 			}
 		};
 		const observer = new MutationObserver( addedImagesCallback );
@@ -110,18 +119,18 @@ function waitForElm( selector ) {
 
 const load = () => {
 	const domElement = document.getElementById(
-		'wpcom-thumbnail-editor-modal'
+		'wpcom-thumbnail-editor-modal-button'
 	);
 	if ( domElement && domElement?.dataset?.id ) {
 		loadThumbnailEditorModal(
-			[ Number( domElement.dataset.id ) ],
+			[ Number( domElement.dataset.id ), 8 ],
 			domElement
 		);
 	}
 };
 
 domReady( () => {
-	waitForElm( '#wpcom-thumbnail-editor-modal' ).then( () => load() );
+	waitForElm( '#wpcom-thumbnail-editor-modal-button' ).then( () => load() );
 } );
 
 jQuery( window ).ready( () => {

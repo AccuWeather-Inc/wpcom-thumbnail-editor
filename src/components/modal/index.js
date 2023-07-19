@@ -9,17 +9,18 @@ import {
 import { focus } from '@wordpress/dom';
 import { LEFT, RIGHT } from '@wordpress/keycodes';
 import { store as coreStore } from '@wordpress/core-data';
+import { store as noticesStore } from '@wordpress/notices';
 import ImageEditor from '../editor';
 
 const {
 	i18n: { __ },
 	element: { useRef, useState, useEffect, useReducer },
-	data: { useSelect },
+	data: { useSelect, useDispatch },
 } = wp;
 
-const ImageEditModal = ( { imageIds, ratioMap } ) => {
+const ImageEditModal = ( { imageIds, ratioMap, startOpened = false } ) => {
 	const modalRef = useRef();
-	const [ isOpen, setOpen ] = useState( true );
+	const [ isOpen, setOpen ] = useState( startOpened );
 	const [ currentPage, setCurrentPage ] = useState( 0 );
 
 	useEffect( () => {
@@ -74,12 +75,14 @@ const ImageEditModal = ( { imageIds, ratioMap } ) => {
 	const canGoForward = currentPage < images?.length - 1;
 
 	const goBack = () => {
+		console.log( { back: images } );
 		if ( canGoBack ) {
 			setCurrentPage( currentPage - 1 );
 		}
 	};
 
 	const goForward = () => {
+		console.log( { forward: images } );
 		if ( canGoForward ) {
 			setCurrentPage( currentPage + 1 );
 		}
@@ -93,17 +96,38 @@ const ImageEditModal = ( { imageIds, ratioMap } ) => {
 		}
 	};
 
+	const { saveMedia, editEntityRecord } = useDispatch( coreStore );
+	const editMediaItem = ( recordId, edits ) =>
+		editEntityRecord( 'root', 'media', 'edit', recordId, edits );
+
 	const onSave = () => {
 		// Handle save of all updateImages.
 		setOpen( false );
 		thumbnailEditorObj.addedIds = [];
 	};
 
+	const { createErrorNotice } = useDispatch( noticesStore );
+	function onSaveError( message = '' ) {
+		const defaultMsg = __(
+			"Please select 'Save' button to save and close the modal.",
+			'wpcom-thumbnail-editor'
+		);
+		createErrorNotice( message ? message : defaultMsg, {
+			type: 'snackbar',
+		} );
+	}
+
+	const handleCloseRequest = () => {
+		onSaveError();
+	};
+
 	return (
 		<>
-			{ /* <Button variant="secondary" onClick={ () => setOpen( true ) }>
-				{ __( 'Edit image', 'wpcom-thumbnail-editor' ) }
-			</Button> */ }
+			{ ! startOpened && (
+				<Button variant="secondary" onClick={ () => setOpen( true ) }>
+					{ __( 'Edit Image Thumbnails', 'wpcom-thumbnail-editor' ) }
+				</Button>
+			) }
 			{ isOpen && (
 				<>
 					{ ! images || 0 === images.length ? (
@@ -131,10 +155,7 @@ const ImageEditModal = ( { imageIds, ratioMap } ) => {
 								'Edit Image',
 								'wpcom-thumbnail-editor'
 							) }
-							onRequestClose={ () => {
-								setOpen( false );
-								thumbnailEditorObj.addedIds = [];
-							} }
+							onRequestClose={ handleCloseRequest }
 							isFullScreen
 							shouldCloseOnClickOutside={ false }
 							shouldCloseOnEsc={ false }

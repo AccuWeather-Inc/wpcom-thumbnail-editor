@@ -155,7 +155,7 @@ const addRTE = ( id ) => {
 	return mceOptions;
 };
 
-export default function ImageEditor( { image, ratioMap } ) {
+export default function ImageEditor( { image, ratioMap, onImageEdit } ) {
 	const tinyRef = useRef();
 	const [ alt, setAlt ] = useState( image.alt_text );
 	const [ credit, setCredit ] = useState( image?.meta?.credits );
@@ -166,10 +166,19 @@ export default function ImageEditor( { image, ratioMap } ) {
 
 	const tinyMCE = `${ window.origin }/wp-includes/js/tinymce/tinymce.min.js`;
 
-	const log = () => {
-		if ( tinyRef.current ) {
-			// eslint-disable-next-line no-console
-			console.log( tinyRef.current.getContent() );
+	const onFieldChange = ( field, value, callback ) => {
+		if ( 'alt_text' === field ) {
+			image[ field ] = value;
+		} else if ( 'credits' === field || 'caption' === field ) {
+			image.meta[ field ] = value;
+		}
+
+		if ( 'undefined' !== typeof callback ) {
+			callback( value );
+		}
+
+		if ( 'undefined' !== typeof onImageEdit ) {
+			onImageEdit( image.id, field, value );
 		}
 	};
 
@@ -201,7 +210,13 @@ export default function ImageEditor( { image, ratioMap } ) {
 									'wpcom-thumbnail-editor'
 								) }
 								value={ credit }
-								onChange={ setCredit }
+								onChange={ ( _credits ) =>
+									onFieldChange(
+										'credits',
+										_credits,
+										setCredit
+									)
+								}
 							/>
 							<TextareaControl
 								label={ __(
@@ -214,7 +229,9 @@ export default function ImageEditor( { image, ratioMap } ) {
 								) }
 								className="wpcom-thumbnail-editor__image-alt"
 								value={ alt }
-								onChange={ setAlt }
+								onChange={ ( _alt ) =>
+									onFieldChange( 'alt_text', _alt, setAlt )
+								}
 							/>
 							<div className="components-base-control wpcom-thumbnail-editor__image-caption">
 								<div className="components-base-control__field">
@@ -233,13 +250,16 @@ export default function ImageEditor( { image, ratioMap } ) {
 										onInit={ ( evt, _editor ) =>
 											( tinyRef.current = _editor )
 										}
-										initialValue={ image.caption.raw }
+										initialValue={
+											image?.caption?.raw ??
+											image?.meta?.caption
+										}
 										init={ opts }
+										onEditorChange={ ( txt ) => {
+											onFieldChange( 'caption', txt );
+										} }
 									/>
 								</div>
-								<button onClick={ log }>
-									Log editor content
-								</button>
 							</div>
 						</>
 					) : (
