@@ -1,5 +1,4 @@
-/* global React */
-
+import React from 'react';
 import { TabPanel, TextControl, TextareaControl } from '@wordpress/components';
 import { Editor } from '@tinymce/tinymce-react';
 import CropEditor from '../crop-editor';

@@ -1,10 +1,9 @@
-/* global jQuery, MutationObserver, thumbnailEditorObj */
+/* global MutationObserver, thumbnailEditorObj */
 import ImageEditModal from './components/modal';
 import './main.scss';
 
 const {
 	element: { render, createRoot, createElement },
-	domReady,
 } = wp;
 
 const observerConfig = {
@@ -94,7 +93,7 @@ function watchForUploadedImages() {
 		const observer = new MutationObserver( addedImagesCallback );
 		observer.observe( mediaLibraryNode, observerConfig );
 
-		jQuery( document ).on( 'click', '.uploader-inline > button', () => {
+		$( document ).on( 'click', '.uploader-inline > button', () => {
 			observer.disconnect();
 		} );
 	}
@@ -117,25 +116,27 @@ function waitForElm( selector ) {
 	} );
 }
 
-const load = () => {
-	const domElement = document.getElementById(
-		'wpcom-thumbnail-editor-modal-button'
-	);
-	if ( domElement && domElement?.dataset?.id ) {
-		loadThumbnailEditorModal(
-			[ Number( domElement.dataset.id ), 8 ],
-			domElement
-		);
+export function setup() {
+	const { frame } = wp.media;
+	if ( 'undefined' !== typeof frame ) {
+		frame.on( 'toggle:upload:attachment', () => {
+			initImageIds();
+			watchForUploadedImages();
+		} );
+	} else {
+		waitForElm( '#wpcom-thumbnail-editor-modal-button' ).then( () => {
+			const domElement = document.getElementById(
+				'wpcom-thumbnail-editor-modal-button'
+			);
+			if ( domElement && domElement?.dataset?.id ) {
+				loadThumbnailEditorModal(
+					// @todo: delete this after testing is complete.
+					[ Number( domElement.dataset.id ), 8 ],
+					domElement
+				);
+			}
+		} );
 	}
-};
+}
 
-domReady( () => {
-	waitForElm( '#wpcom-thumbnail-editor-modal-button' ).then( () => load() );
-} );
-
-jQuery( window ).ready( () => {
-	wp.media?.frame.on( 'toggle:upload:attachment', () => {
-		initImageIds();
-		watchForUploadedImages();
-	} );
-} );
+$( window ).on( 'load', setup );

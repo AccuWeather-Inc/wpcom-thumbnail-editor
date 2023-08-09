@@ -1,5 +1,4 @@
-/* global React */
-
+import React from 'react';
 import { TabPanel } from '@wordpress/components';
 import Cropper from 'react-cropper';
 
@@ -129,7 +128,7 @@ const thumbnailReducer = ( state, action ) => {
 	};
 };
 
-const CropEditor = ( { image, ratioMap } ) => {
+export const CropEditor = ( { image, ratioMap } ) => {
 	const cropperRef = useRef();
 
 	const initialThumbnail = () => {

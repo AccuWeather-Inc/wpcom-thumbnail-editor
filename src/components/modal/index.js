@@ -1,5 +1,6 @@
-/* global React, thumbnailEditorObj */
+/* global thumbnailEditorObj */
 
+import React from 'react';
 import {
 	Modal,
 	Button,
@@ -18,7 +19,11 @@ const {
 	data: { useSelect, useDispatch },
 } = wp;
 
-const ImageEditModal = ( { imageIds, ratioMap, startOpened = false } ) => {
+export const ImageEditModal = ( {
+	imageIds,
+	ratioMap,
+	startOpened = false,
+} ) => {
 	const modalRef = useRef();
 	const [ isOpen, setOpen ] = useState( startOpened );
 	const [ currentPage, setCurrentPage ] = useState( 0 );

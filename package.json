@@ -1,28 +1,30 @@
 {
-  "name": "wpcom-thumbnail-editor",
-  "version": "1.0.0",
-  "description": "Since thumbnails are generated on-demand on WordPress.com, thumbnail cropping location must be set via the URL.",
-  "main": "index.js",
-  "directories": {
-    "test": "tests"
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "wp-scripts build",
-    "start": "wp-scripts start"
-  },
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "@wordpress/dependency-extraction-webpack-plugin": "^4.16.0",
-    "@wordpress/eslint-plugin": "^14.7.0",
-    "@wordpress/scripts": "^26.2.0"
-  },
-  "dependencies": {
-    "@tinymce/tinymce-react": "^4.3.0",
-    "@wordpress/components": "^25.0.0",
-    "@wordpress/core-data": "^6.11.0",
-    "react-cropper": "^2.3.3",
-    "tinymce": "^6.4.2"
-  }
+	"name": "wpcom-thumbnail-editor",
+	"version": "1.0.0",
+	"description": "Since thumbnails are generated on-demand on WordPress.com, thumbnail cropping location must be set via the URL.",
+	"main": "index.js",
+	"directories": {
+		"test": "tests"
+	},
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"build": "wp-scripts build --config=./webpack.config.js",
+		"start": "wp-scripts start --config=./webpack.config.js"
+	},
+	"author": "",
+	"license": "ISC",
+	"devDependencies": {
+		"@wordpress/scripts": "^26.9.0"
+	},
+	"dependencies": {
+		"@tinymce/tinymce-react": "^4.3.0",
+		"@wordpress/components": "^25.4.0",
+		"@wordpress/core-data": "^6.15.0",
+		"react-cropper": "^2.3.3"
+	},
+	"peerDependencies": {
+		"webpack": "^5.47.1",
+		"@wordpress/eslint-plugin": "^14.4.0",
+		"@wordpress/dependency-extraction-webpack-plugin": "^4.14.0"
+	}
 }
