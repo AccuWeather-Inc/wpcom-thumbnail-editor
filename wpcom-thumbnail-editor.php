@@ -9,6 +9,8 @@
  * @package WPCOM_Thumbnail_Editor
  */
 
+use function Accuweather\is_dev;
+
 /**
  * Plugin container
  */
@@ -163,14 +165,30 @@ class WPcom_Thumbnail_Editor {
 	}
 
 	/**
-	 * Load the dev dependency for react refresh support.
+	 * Whether or not this is running in dev mode.
+	 *
+	 * @return bool
 	 */
-	private function load_dev_runtime() {
-		$build_info = $this->load_asset( 'runtime' );
+	private function is_dev() {
+		return ! empty( $this->load_asset( 'runtime' ) )
+			&& defined( 'SCRIPT_DEBUG' )
+			&& SCRIPT_DEBUG;
+	}
+
+	/**
+	 * Load the dev dependency for react refresh support.
+	 *
+	 * @param string $file_name The name of the file without any extension.
+	 *
+	 * @return void
+	 */
+	private function enqueue_asset_script( $file_name = 'runtime' ) {
+		$build_info = $this->load_asset( $file_name );
 		if ( ! empty( $build_info ) ) {
+			$src_path = ! $this->is_dev() ? plugin_dir_url( __FILE__ ) : 'http://localhost:8887/';
 			wp_enqueue_script(
-				'thumbnail-edit-runtime-script',
-				plugin_dir_url( __FILE__ ) . 'build/runtime.js',
+				'thumbnail-edit-' . $file_name . '-script',
+				$src_path . 'build/' . $file_name . '.js',
 				$build_info['dependencies'],
 				$build_info['version'],
 				true
@@ -198,11 +216,10 @@ class WPcom_Thumbnail_Editor {
 			'upload.php' === $hook
 			|| in_array( $post_type, $supported_post_types, true )
 		) {
-			$this->load_dev_runtime();
-
-			$build_info = $this->load_asset();
+			// Legacy wpcom-thumbnail-editor support scripts.
 			wp_enqueue_script( 'imgareaselect' );
 			wp_enqueue_style( 'imgareaselect' );
+
 			// Create a localized script variable to be used in JS/React App.
 			wp_localize_script(
 				'react',
@@ -214,19 +231,20 @@ class WPcom_Thumbnail_Editor {
 				)
 			);
 
+			// Load wpcom-thumbnail-editor react modal support.
+			$build_info = $this->load_asset();
 			wp_enqueue_style(
 				'thumbnail-edit-style',
 				plugin_dir_url( __FILE__ ) . 'build/index.css',
 				array( 'wp-components' ),
 				$build_info['version']
 			);
-			wp_enqueue_script(
-				'thumbnail-edit-script',
-				plugin_dir_url( __FILE__ ) . 'build/index.js',
-				$build_info['dependencies'],
-				$build_info['version'],
-				true
-			);
+			$this->enqueue_asset_script( 'index' );
+
+			// Check if dev debugging with HMR should be supported.
+			if ( $this->is_dev() ) {
+				$this->enqueue_asset_script();
+			}
 		}
 	}
 

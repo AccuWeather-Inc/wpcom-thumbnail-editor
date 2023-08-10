@@ -8,13 +8,18 @@
 	},
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"build": "wp-scripts build --config=./webpack.config.js",
-		"start": "wp-scripts start --config=./webpack.config.js"
+		"build": "wp-scripts build",
+		"start": "wp-scripts start",
+		"build:custom": "wp-scripts build --webpack-src-dir=src --config=./webpack.config.js",
+		"start:custom": "wp-scripts start --webpack-src-dir=src --config=./webpack.config.js"
 	},
 	"author": "",
 	"license": "ISC",
 	"devDependencies": {
-		"@wordpress/scripts": "^26.9.0"
+		"@wordpress/dependency-extraction-webpack-plugin": "^4.16.0",
+		"@wordpress/eslint-plugin": "^14.12.0",
+		"@wordpress/scripts": "^26.2.0",
+		"prettier": "npm:wp-prettier@^2.8.5"
 	},
 	"dependencies": {
 		"@tinymce/tinymce-react": "^4.3.0",
@@ -23,8 +28,6 @@
 		"react-cropper": "^2.3.3"
 	},
 	"peerDependencies": {
-		"webpack": "^5.47.1",
-		"@wordpress/eslint-plugin": "^14.4.0",
-		"@wordpress/dependency-extraction-webpack-plugin": "^4.14.0"
+		"webpack": "^5.47.1"
 	}
 }

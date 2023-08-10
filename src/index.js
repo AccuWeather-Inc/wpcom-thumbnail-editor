@@ -1,6 +1,10 @@
-/* global MutationObserver, thumbnailEditorObj */
+/* global thumbnailEditorObj */
 import ImageEditModal from './components/modal';
 import './main.scss';
+
+if ( module.hot ) {
+	module.hot.accept();
+}
 
 const {
 	element: { render, createRoot, createElement },
@@ -117,9 +121,8 @@ function waitForElm( selector ) {
 }
 
 export function setup() {
-	const { frame } = wp.media;
-	if ( 'undefined' !== typeof frame ) {
-		frame.on( 'toggle:upload:attachment', () => {
+	if ( 'undefined' !== typeof wp.media?.frame ) {
+		wp.media.frame.on( 'toggle:upload:attachment', () => {
 			initImageIds();
 			watchForUploadedImages();
 		} );
